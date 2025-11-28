@@ -1,0 +1,112 @@
+const { Pool } = require('pg');
+require('dotenv').config();
+
+// Use environment variable or fallback to local PostgreSQL
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/ecommerce_db';
+
+const pool = new Pool({
+  connectionString: connectionString
+});
+
+async function setupDatabase() {
+  let client;
+  try {
+    client = await pool.connect();
+    console.log('Connected to PostgreSQL database');
+
+    // Create tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL,
+        stock_quantity INTEGER NOT NULL,
+        image_url VARCHAR(500),
+        category VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        total_amount DECIMAL(10,2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        shipping_address TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS order_items (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER REFERENCES orders(id),
+        product_id INTEGER REFERENCES products(id),
+        quantity INTEGER NOT NULL,
+        price DECIMAL(10,2) NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cart_items (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        product_id INTEGER REFERENCES products(id),
+        quantity INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        message TEXT NOT NULL,
+        response TEXT,
+        is_bot BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Insert sample products
+    await client.query(`
+      INSERT INTO products (name, description, price, stock_quantity, category) VALUES
+      ('Wireless Headphones', 'High-quality wireless headphones with noise cancellation', 199.99, 50, 'Electronics'),
+      ('Smart Watch', 'Feature-rich smartwatch with health monitoring', 299.99, 30, 'Electronics'),
+      ('Running Shoes', 'Comfortable running shoes for all terrains', 89.99, 100, 'Sports'),
+      ('Coffee Maker', 'Automatic coffee maker with programmable settings', 149.99, 25, 'Home'),
+      ('Backpack', 'Durable backpack with laptop compartment', 79.99, 75, 'Accessories')
+      ON CONFLICT DO NOTHING
+    `);
+
+    console.log('✅ Database setup completed successfully!');
+    console.log('📦 Sample products inserted');
+    
+  } catch (error) {
+    console.error('❌ Database setup error:', error.message);
+    console.log('\n💡 Troubleshooting tips:');
+    console.log('1. Make sure PostgreSQL is installed and running');
+    console.log('2. Check if the database "ecommerce_db" exists');
+    console.log('3. Verify your PostgreSQL username and password');
+    console.log('4. Update the DATABASE_URL in .env file if needed');
+  } finally {
+    if (client) client.release();
+    await pool.end();
+  }
+}
+
+setupDatabase();

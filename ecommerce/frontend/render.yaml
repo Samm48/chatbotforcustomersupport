@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ecommerce-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          name: ecommerce-backend
+          type: web
+          property: url
