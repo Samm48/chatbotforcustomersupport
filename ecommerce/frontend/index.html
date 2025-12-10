@@ -141,7 +141,7 @@
                         productCard.className = 'product-card';
                         productCard.innerHTML = `
                             <h3>${product.name}</h3>
-                            <p class="price">$${product.price}</p>
+                            <p class="price">ksh. ${product.price}</p>
                             <p>${product.category || 'General'}</p>
                             <button class="btn">Add to Cart</button>
                         `;
@@ -177,10 +177,10 @@
             
             // Add demo products
             const demoProducts = [
-                { id: 1, name: 'Wireless Headphones', price: 199.99, category: 'Electronics' },
-                { id: 2, name: 'Smart Watch', price: 299.99, category: 'Electronics' },
-                { id: 3, name: 'Running Shoes', price: 89.99, category: 'Sports' },
-                { id: 4, name: 'Coffee Maker', price: 149.99, category: 'Home' }
+                { id: 1, name: 'Wireless Headphones', price: 3000, category: 'Electronics' },
+                { id: 2, name: 'Smart Watch', price: 5500, category: 'Electronics' },
+                { id: 3, name: 'Running Shoes', price: 7500, category: 'Sports' },
+                { id: 4, name: 'Coffee Maker', price: 28700, category: 'Home' }
             ];
             
             demoProducts.forEach(product => {
@@ -188,7 +188,7 @@
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
                     <h3>${product.name}</h3>
-                    <p class="price">$${product.price}</p>
+                    <p class="price">ksh. ${product.price}</p>
                     <p>${product.category}</p>
                     <button class="btn">Add to Cart</button>
                 `;
