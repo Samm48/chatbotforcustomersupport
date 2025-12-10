@@ -39,6 +39,44 @@
         <p>© 2024 ShopSmart. All rights reserved.</p>
     </div>
 
+    <!-- Chatbot HTML added after the footer -->
+    <div id="chatbot-modal" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 1000;">
+        <div style="background: #007bff; color: white; padding: 15px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">🤖 AI Shopping Assistant</h3>
+            <button id="close-chat" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        
+        <div id="chat-messages" style="height: 300px; overflow-y: auto; padding: 15px;">
+            <div class="message bot" style="background: #f1f1f1; padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 80%;">
+                Hello! I'm your AI shopping assistant. How can I help you today?
+            </div>
+        </div>
+        
+        <div style="padding: 15px; border-top: 1px solid #eee;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Type your message..." 
+                       style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px;">
+                <button id="send-chat" style="background: #007bff; color: white; border: none; border-radius: 20px; padding: 0 20px; cursor: pointer;">
+                    Send
+                </button>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                <button class="quick-question" data-question="What products do you have?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    What products?
+                </button>
+                <button class="quick-question" data-question="How do I track my order?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Track order
+                </button>
+                <button class="quick-question" data-question="What is your shipping policy?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Shipping info
+                </button>
+                <button class="quick-question" data-question="How do I return an item?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Returns
+                </button>
+            </div>
+        </div>
+    </div>
+
     <button class="chat-btn" id="chat-btn">💬</button>
 
     <script>
@@ -172,23 +210,121 @@
             alert(`Added product ${productId} to cart!`);
         }
 
-        function openChat() {
-            alert("AI Chatbot coming soon!\n\nBackend URL: " + BACKEND_URL + 
-                  "\n\nTest these endpoints:\n" +
-                  "1. " + BACKEND_URL + "/api/health\n" +
-                  "2. " + BACKEND_URL + "/api/products\n" +
-                  "3. " + BACKEND_URL + "/api/auth/login");
+        // ========== CHATBOT FUNCTIONALITY ==========
+        let isChatOpen = false;
+        const chatbotModal = document.getElementById('chatbot-modal');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat');
+        const closeChatBtn = document.getElementById('close-chat');
+
+        // AI Responses
+        const aiResponses = {
+            'product': "We have a wide range of products including electronics, sports gear, home appliances, and accessories. You can browse all products on this page!",
+            'order': "To track your order, please check your account dashboard or contact support with your order number.",
+            'shipping': "We offer free shipping on orders over $50. Standard delivery takes 3-5 business days. Express shipping is available for $15.",
+            'return': "We have a 30-day return policy. Items must be in original condition with tags. Start returns from your order history.",
+            'price': "Our prices are competitive and we offer regular discounts. Check our promotions page for current offers!",
+            'payment': "We accept all major credit cards, PayPal, and Apple Pay. All payments are secure.",
+            'default': "I'm here to help with products, orders, shipping, returns, and general questions. What would you like to know?"
+        };
+
+        // Toggle chat window
+        chatBtn.addEventListener('click', function() {
+            isChatOpen = !isChatOpen;
+            chatbotModal.style.display = isChatOpen ? 'block' : 'none';
+            if (isChatOpen) {
+                chatInput.focus();
+            }
+        });
+
+        // Close chat
+        closeChatBtn.addEventListener('click', function() {
+            isChatOpen = false;
+            chatbotModal.style.display = 'none';
+        });
+
+        // Send message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            chatInput.value = '';
+            
+            // Generate AI response
+            setTimeout(() => {
+                const aiResponse = generateAIResponse(message);
+                addMessage(aiResponse, 'bot');
+            }, 500);
         }
 
+        // Generate AI response
+        function generateAIResponse(message) {
+            const msg = message.toLowerCase();
+            
+            if (msg.includes('product') || msg.includes('item') || msg.includes('buy')) {
+                return aiResponses.product;
+            } else if (msg.includes('order') || msg.includes('track') || msg.includes('delivery')) {
+                return aiResponses.order;
+            } else if (msg.includes('shipping') || msg.includes('deliver') || msg.includes('arrive')) {
+                return aiResponses.shipping;
+            } else if (msg.includes('return') || msg.includes('refund') || msg.includes('exchange')) {
+                return aiResponses.return;
+            } else if (msg.includes('price') || msg.includes('cost') || msg.includes('expensive')) {
+                return aiResponses.price;
+            } else if (msg.includes('payment') || msg.includes('pay') || msg.includes('card')) {
+                return aiResponses.payment;
+            } else if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+                return "Hello! I'm your AI shopping assistant. How can I help you today?";
+            } else {
+                return aiResponses.default;
+            }
+        }
+
+        // Add message to chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.style.background = sender === 'user' ? '#007bff' : '#f1f1f1';
+            messageDiv.style.color = sender === 'user' ? 'white' : 'black';
+            messageDiv.style.padding = '10px';
+            messageDiv.style.borderRadius = '10px';
+            messageDiv.style.marginBottom = '10px';
+            messageDiv.style.maxWidth = '80%';
+            messageDiv.style.marginLeft = sender === 'user' ? 'auto' : '0';
+            messageDiv.textContent = text;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Event listeners
+        sendChatBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Quick question buttons
+        document.querySelectorAll('.quick-question').forEach(button => {
+            button.addEventListener('click', function() {
+                const question = this.getAttribute('data-question');
+                chatInput.value = question;
+                sendMessage();
+            });
+        });
+
+        // Remove old openChat function since we have the new chatbot
         // Event Listeners
         retryBtn.addEventListener('click', loadProducts);
-        chatBtn.addEventListener('click', openChat);
-
+        
         // Load products when page loads
         window.addEventListener('DOMContentLoaded', function() {
             console.log('Page loaded, testing backend...');
             loadProducts();
         });
     </script>
+    
 </body>
 </html>
