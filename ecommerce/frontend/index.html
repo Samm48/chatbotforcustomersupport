@@ -14,68 +14,158 @@
         .btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px; }
         .footer { background: #333; color: white; text-align: center; padding: 20px; margin-top: 40px; }
         .chat-btn { position: fixed; bottom: 20px; right: 20px; background: #007bff; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer; }
+        .loading { text-align: center; padding: 40px; color: #666; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🛍️ ShopSmart</h1>
         <p>AI-Powered E-Commerce Platform</p>
+        <small id="backend-status">Connecting to backend...</small>
     </div>
 
     <div class="products" id="products">
-        <!-- Products will load here -->
-        <p>Loading products...</p>
+        <div class="loading" id="loading">
+            Loading products from backend...
+            <div style="margin-top: 20px;">
+                <button id="retry-btn" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px;">
+                    Click to Load Products
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="footer">
         <p>© 2024 ShopSmart. All rights reserved.</p>
     </div>
 
-    <button class="chat-btn" onclick="openChat()">💬</button>
+    <button class="chat-btn" id="chat-btn">💬</button>
 
     <script>
+        // USE YOUR ACTUAL BACKEND URL HERE
+        const BACKEND_URL = "https://ecommerce-backend.onrender.com";
+        
+        // DOM Elements
+        const backendStatus = document.getElementById('backend-status');
+        const productsDiv = document.getElementById('products');
+        const loadingDiv = document.getElementById('loading');
+        const retryBtn = document.getElementById('retry-btn');
+        const chatBtn = document.getElementById('chat-btn');
+        
+        // Update status display
+        backendStatus.textContent = `Backend: ${BACKEND_URL}`;
+        
+        // Test backend connection
+        async function testBackend() {
+            try {
+                console.log('Testing backend at:', BACKEND_URL);
+                const response = await fetch(`${BACKEND_URL}/api/health`);
+                const data = await response.json();
+                console.log('Backend response:', data);
+                backendStatus.textContent = `✅ Backend Connected: ${BACKEND_URL}`;
+                backendStatus.style.color = 'lightgreen';
+                return true;
+            } catch (error) {
+                console.error('Backend test failed:', error);
+                backendStatus.textContent = `❌ Backend Error: ${BACKEND_URL}`;
+                backendStatus.style.color = 'orange';
+                return false;
+            }
+        }
+
         // Fetch products from backend
         async function loadProducts() {
+            loadingDiv.innerHTML = 'Loading products...';
+            
             try {
-                const backendUrl = window.location.hostname.includes('localhost') 
-                    ? 'http://localhost:5000' 
-                    : 'https://ecommerce-backend.onrender.com';
+                // First test backend
+                const isBackendWorking = await testBackend();
                 
-                const response = await fetch(`${backendUrl}/api/products`);
+                if (!isBackendWorking) {
+                    throw new Error('Backend not responding');
+                }
+                
+                console.log('Fetching products from:', `${BACKEND_URL}/api/products`);
+                const response = await fetch(`${BACKEND_URL}/api/products`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Products received:', data);
                 
-                const productsDiv = document.getElementById('products');
                 productsDiv.innerHTML = '';
                 
-                data.products.forEach(product => {
-                    productsDiv.innerHTML += `
-                        <div class="product-card">
+                if (data.products && data.products.length > 0) {
+                    data.products.forEach(product => {
+                        const productCard = document.createElement('div');
+                        productCard.className = 'product-card';
+                        productCard.innerHTML = `
                             <h3>${product.name}</h3>
                             <p class="price">$${product.price}</p>
-                            <p>${product.category}</p>
-                            <button class="btn" onclick="addToCart(${product.id})">Add to Cart</button>
-                        </div>
-                    `;
-                });
+                            <p>${product.category || 'General'}</p>
+                            <button class="btn">Add to Cart</button>
+                        `;
+                        productsDiv.appendChild(productCard);
+                    });
+                } else {
+                    showDemoProducts();
+                }
             } catch (error) {
-                document.getElementById('products').innerHTML = `
-                    <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
-                        <h3>Products loaded from cache</h3>
-                        <div class="product-card">
-                            <h3>Wireless Headphones</h3>
-                            <p class="price">$199.99</p>
-                            <p>Electronics</p>
-                            <button class="btn">Add to Cart</button>
-                        </div>
-                        <div class="product-card">
-                            <h3>Smart Watch</h3>
-                            <p class="price">$299.99</p>
-                            <p>Electronics</p>
-                            <button class="btn">Add to Cart</button>
-                        </div>
-                    </div>
-                `;
+                console.error('Error loading products:', error);
+                showDemoProducts(error.message);
             }
+        }
+
+        function showDemoProducts(errorMessage = '') {
+            productsDiv.innerHTML = '';
+            
+            const errorContainer = document.createElement('div');
+            errorContainer.className = 'loading';
+            errorContainer.style.gridColumn = '1/-1';
+            
+            if (errorMessage) {
+                errorContainer.innerHTML = `
+                    <h3>⚠️ Could not connect to backend</h3>
+                    <p>Error: ${errorMessage}</p>
+                    <p>Using demo products instead:</p>
+                `;
+            } else {
+                errorContainer.innerHTML = `<h3>No products found in database</h3><p>Using demo products instead:</p>`;
+            }
+            
+            productsDiv.appendChild(errorContainer);
+            
+            // Add demo products
+            const demoProducts = [
+                { id: 1, name: 'Wireless Headphones', price: 199.99, category: 'Electronics' },
+                { id: 2, name: 'Smart Watch', price: 299.99, category: 'Electronics' },
+                { id: 3, name: 'Running Shoes', price: 89.99, category: 'Sports' },
+                { id: 4, name: 'Coffee Maker', price: 149.99, category: 'Home' }
+            ];
+            
+            demoProducts.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                productCard.innerHTML = `
+                    <h3>${product.name}</h3>
+                    <p class="price">$${product.price}</p>
+                    <p>${product.category}</p>
+                    <button class="btn">Add to Cart</button>
+                `;
+                productsDiv.appendChild(productCard);
+            });
+            
+            // Add retry button
+            const retryContainer = document.createElement('div');
+            retryContainer.style.marginTop = '20px';
+            retryContainer.innerHTML = `
+                <button style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px;">
+                    Retry Connection
+                </button>
+            `;
+            productsDiv.appendChild(retryContainer);
         }
 
         function addToCart(productId) {
@@ -83,14 +173,22 @@
         }
 
         function openChat() {
-            alert("AI Chatbot coming soon! Backend is working at: " + 
-                  (window.location.hostname.includes('localhost') 
-                    ? 'http://localhost:5000' 
-                    : 'https://ecommerce-backend.onrender.com'));
+            alert("AI Chatbot coming soon!\n\nBackend URL: " + BACKEND_URL + 
+                  "\n\nTest these endpoints:\n" +
+                  "1. " + BACKEND_URL + "/api/health\n" +
+                  "2. " + BACKEND_URL + "/api/products\n" +
+                  "3. " + BACKEND_URL + "/api/auth/login");
         }
 
+        // Event Listeners
+        retryBtn.addEventListener('click', loadProducts);
+        chatBtn.addEventListener('click', openChat);
+
         // Load products when page loads
-        window.onload = loadProducts;
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, testing backend...');
+            loadProducts();
+        });
     </script>
 </body>
 </html>
