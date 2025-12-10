@@ -1,3 +1,4 @@
+const API_BASE = window.API_BASE_URL || '';
 import React, { useState, useEffect } from 'react';
 import ChatbotWidget from './components/ChatbotWidget';
 import './App.css';
@@ -12,7 +13,7 @@ function App() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products');
+      const response = await fetch('${API_BASE}/api/products');
       const data = await response.json();
       setProducts(data.products || []);
     } catch (error) {
