@@ -18,6 +18,12 @@
         .cart-icon { position: relative; cursor: pointer; }
         .cart-count { position: absolute; top: -8px; right: -8px; background: #ff4757; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
         
+        /* Live Status Indicator */
+        .live-status { display: inline-block; margin-left: 15px; font-size: 0.9rem; }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        
         /* Main Content */
         .main-content { display: flex; min-height: calc(100vh - 160px); }
         .sidebar { width: 250px; background: white; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
@@ -168,6 +174,11 @@
                 <div class="user-menu">
                     <span id="user-greeting">Guest</span>
                     <button id="logout-btn" style="display: none; margin-left: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Logout</button>
+                </div>
+                <div class="live-status">
+                    <span class="status-indicator status-offline" id="connection-status-indicator"></span>
+                    <span id="connection-status-text">Offline</span>
+                    <span style="margin-left: 10px;">👥 <span id="live-visitors">0</span></span>
                 </div>
             </div>
         </div>
@@ -605,9 +616,154 @@
 
     <button class="chat-btn" id="chat-btn">💬</button>
 
+    <!-- Socket.io CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
     <script>
         // ========== CHATBOT FUNCTIONALITY ==========
-        // (Keep your existing chatbot code here - it's already working)
+        let isChatOpen = false;
+        let chatbotModal = null;
+        let chatMessages = null;
+        let chatInput = null;
+        let sendChatBtn = null;
+        let closeChatBtn = null;
+
+        function initializeChatbot() {
+            chatbotModal = document.getElementById('chatbot-modal');
+            chatMessages = document.getElementById('chat-messages');
+            chatInput = document.getElementById('chat-input');
+            sendChatBtn = document.getElementById('send-chat');
+            closeChatBtn = document.getElementById('close-chat');
+
+            if (!chatbotModal || !chatMessages || !chatInput) {
+                console.log('Chatbot elements not found, retrying...');
+                setTimeout(initializeChatbot, 100);
+                return;
+            }
+
+            console.log('✅ Chatbot initialized successfully');
+
+            // AI Responses
+            const aiResponses = {
+                'product': "We have a wide range of products including electronics, sports gear, home appliances, and accessories. All prices are in Kenyan Shillings (KSH)!",
+                'order': "To track your order, please check your account dashboard or contact support with your order number.",
+                'shipping': "We offer free shipping on orders over KSH 10,000. Standard delivery takes 3-5 business days. Express shipping is available for KSH 1,500.",
+                'return': "We have a 30-day return policy. Items must be in original condition with tags. Start returns from your order history.",
+                'price': "Our prices are competitive and we offer regular discounts. Check our promotions page for current offers!",
+                'payment': "We accept MPesa, credit cards, and mobile banking. All payments are secure.",
+                'default': "I'm here to help with products, orders, shipping, returns, and general questions. What would you like to know?"
+            };
+
+            // Toggle chat window
+            document.getElementById('chat-btn').addEventListener('click', function() {
+                isChatOpen = !isChatOpen;
+                chatbotModal.style.display = isChatOpen ? 'block' : 'none';
+                if (isChatOpen) {
+                    chatInput.focus();
+                }
+            });
+
+            // Close chat
+            if (closeChatBtn) {
+                closeChatBtn.addEventListener('click', function() {
+                    isChatOpen = false;
+                    chatbotModal.style.display = 'none';
+                });
+            }
+
+            // Send message function
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (!message) return;
+                
+                // Add user message
+                addMessage(message, 'user');
+                chatInput.value = '';
+                
+                // Generate AI response
+                setTimeout(() => {
+                    const aiResponse = generateAIResponse(message);
+                    addMessage(aiResponse, 'bot');
+                    
+                    // Also send via socket if connected
+                    if (socket && socket.connected) {
+                        socket.emit('send-chat-message', {
+                            userId: currentUser.id || 'guest',
+                            message: message,
+                            timestamp: new Date()
+                        });
+                    }
+                }, 500);
+            }
+
+            // Generate AI response
+            function generateAIResponse(message) {
+                const msg = message.toLowerCase();
+                
+                if (msg.includes('product') || msg.includes('item') || msg.includes('buy')) {
+                    return aiResponses.product;
+                } else if (msg.includes('order') || msg.includes('track') || msg.includes('delivery')) {
+                    return aiResponses.order;
+                } else if (msg.includes('shipping') || msg.includes('deliver') || msg.includes('arrive')) {
+                    return aiResponses.shipping;
+                } else if (msg.includes('return') || msg.includes('refund') || msg.includes('exchange')) {
+                    return aiResponses.return;
+                } else if (msg.includes('price') || msg.includes('cost') || msg.includes('expensive')) {
+                    return aiResponses.price;
+                } else if (msg.includes('payment') || msg.includes('pay') || msg.includes('mpesa')) {
+                    return aiResponses.payment;
+                } else if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+                    return "Hello! I'm your AI shopping assistant. How can I help you today?";
+                } else {
+                    return aiResponses.default;
+                }
+            }
+
+            // Add message to chat
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                messageDiv.style.background = sender === 'user' ? '#007bff' : '#f1f1f1';
+                messageDiv.style.color = sender === 'user' ? 'white' : 'black';
+                messageDiv.style.padding = '10px';
+                messageDiv.style.borderRadius = '10px';
+                messageDiv.style.marginBottom = '10px';
+                messageDiv.style.maxWidth = '80%';
+                messageDiv.style.marginLeft = sender === 'user' ? 'auto' : '0';
+                messageDiv.textContent = text;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Event listeners
+            if (sendChatBtn) {
+                sendChatBtn.addEventListener('click', sendMessage);
+            }
+            
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+
+            // Quick question buttons
+            document.querySelectorAll('.quick-question').forEach(button => {
+                button.addEventListener('click', function() {
+                    const question = this.getAttribute('data-question');
+                    chatInput.value = question;
+                    sendMessage();
+                });
+            });
+
+            // Make functions globally available
+            window.addMessage = addMessage;
+            window.sendChatMessage = sendMessage;
+            window.generateAIResponse = generateAIResponse;
+        }
+
+        // Initialize chatbot when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeChatbot);
     </script>
 
     <script>
@@ -628,6 +784,9 @@
         let allProducts = [];
         let adminProducts = [];
 
+        // Socket.io connection
+        let socket = null;
+
         // DOM Elements
         const pages = {
             login: document.getElementById('login-page'),
@@ -644,9 +803,142 @@
             loadProducts();
             updateCartDisplay();
             setupEventListeners();
+            initializeSocket();
             
             // Start on login page
             showPage('login');
+        }
+
+        // Socket.io Initialization
+        function initializeSocket() {
+            const BACKEND_URL = "https://ecommerce-backend-jnb5.onrender.com";
+            
+            socket = io(BACKEND_URL, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+            
+            // Connection events
+            socket.on('connect', () => {
+                console.log('🔌 Connected to real-time server');
+                updateConnectionStatus(true);
+                
+                // Join appropriate room based on user role
+                if (currentUser.isLoggedIn) {
+                    if (currentUser.isAdmin) {
+                        socket.emit('join-admin');
+                        console.log('👨‍💼 Joined admin room');
+                    } else {
+                        socket.emit('join-customer', currentUser.id);
+                        console.log('🛒 Joined customer room');
+                    }
+                }
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('🔌 Disconnected from real-time server');
+                updateConnectionStatus(false);
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('❌ Socket connection error:', error);
+                updateConnectionStatus(false);
+            });
+            
+            // Real-time events
+            socket.on('order-created', (orderData) => {
+                if (currentUser.isAdmin) {
+                    showNotification(`🛍️ New Order #${orderData.id} received!`);
+                    updateAdminOrders(orderData);
+                }
+            });
+            
+            socket.on('order-confirmed', (orderData) => {
+                if (!currentUser.isAdmin && currentUser.id === orderData.userId) {
+                    showNotification(`✅ Order #${orderData.id} confirmed!`);
+                }
+            });
+            
+            socket.on('product-changed', (productData) => {
+                console.log('📦 Product updated in real-time:', productData.name);
+                
+                // Update local products array
+                const index = allProducts.findIndex(p => p.id === productData.id);
+                if (index !== -1) {
+                    allProducts[index] = productData;
+                } else {
+                    allProducts.push(productData);
+                }
+                
+                // Refresh product displays
+                renderAllProducts();
+                renderFeaturedProducts();
+                
+                if (currentUser.isAdmin) {
+                    renderAdminProductsTable();
+                }
+                
+                showNotification(`📦 ${productData.name} updated`);
+            });
+            
+            socket.on('product-removed', (productData) => {
+                console.log('🗑️ Product removed in real-time:', productData.productId);
+                
+                // Remove from local array
+                allProducts = allProducts.filter(p => p.id !== productData.productId);
+                
+                // Refresh displays
+                renderAllProducts();
+                renderFeaturedProducts();
+                
+                if (currentUser.isAdmin) {
+                    adminProducts = adminProducts.filter(p => p.id !== productData.productId);
+                    renderAdminProductsTable();
+                    updateAdminStats();
+                }
+                
+                showNotification('🗑️ Product removed');
+            });
+            
+            // Real-time chat from server
+            socket.on('receive-chat-message', (messageData) => {
+                if (window.addMessage) {
+                    window.addMessage(messageData.message, 'bot');
+                }
+            });
+            
+            // Live visitor count
+            socket.on('visitor-count', (count) => {
+                updateVisitorCount(count);
+            });
+            
+            socket.on('visitor-update', (count) => {
+                updateVisitorCount(count);
+            });
+        }
+
+        function updateConnectionStatus(isConnected) {
+            const indicator = document.getElementById('connection-status-indicator');
+            const text = document.getElementById('connection-status-text');
+            
+            if (indicator && text) {
+                if (isConnected) {
+                    indicator.className = 'status-indicator status-online';
+                    text.textContent = 'Online';
+                } else {
+                    indicator.className = 'status-indicator status-offline';
+                    text.textContent = 'Offline';
+                }
+            }
+        }
+
+        function updateVisitorCount(count) {
+            const visitorElement = document.getElementById('live-visitors');
+            if (visitorElement) {
+                visitorElement.textContent = count;
+            }
         }
 
         // Check if user is logged in
@@ -685,9 +977,9 @@
             // Hide/show sidebar based on page
             const sidebar = document.getElementById('sidebar');
             if (pageId === 'login') {
-                sidebar.style.display = 'none';
+                if (sidebar) sidebar.style.display = 'none';
             } else {
-                sidebar.style.display = 'block';
+                if (sidebar) sidebar.style.display = 'block';
             }
         }
 
@@ -754,6 +1046,13 @@
             
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             updateUserUI();
+            
+            // Reinitialize socket with new user
+            if (socket) {
+                socket.disconnect();
+            }
+            initializeSocket();
+            
             showPage('home');
             showNotification(`Welcome back, ${userData.name}!`);
         }
@@ -770,28 +1069,40 @@
             
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             updateUserUI();
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
             showPage('login');
             showNotification('Logged out successfully');
         }
 
         function updateUserUI() {
             // Update greeting
-            document.getElementById('user-greeting').textContent = currentUser.name;
+            const greetingElement = document.getElementById('user-greeting');
+            if (greetingElement) {
+                greetingElement.textContent = currentUser.name;
+            }
             
             // Show/hide logout button
             const logoutBtn = document.getElementById('logout-btn');
-            if (currentUser.isLoggedIn) {
-                logoutBtn.style.display = 'inline-block';
-            } else {
-                logoutBtn.style.display = 'none';
+            if (logoutBtn) {
+                if (currentUser.isLoggedIn) {
+                    logoutBtn.style.display = 'inline-block';
+                } else {
+                    logoutBtn.style.display = 'none';
+                }
             }
             
             // Show/hide admin link
             const adminLink = document.getElementById('admin-link');
-            if (currentUser.isAdmin) {
-                adminLink.style.display = 'block';
-            } else {
-                adminLink.style.display = 'none';
+            if (adminLink) {
+                if (currentUser.isAdmin) {
+                    adminLink.style.display = 'block';
+                } else {
+                    adminLink.style.display = 'none';
+                }
             }
         }
 
@@ -951,11 +1262,17 @@
         }
 
         function updateAdminStats() {
-            document.getElementById('admin-total-products').textContent = adminProducts.length;
-            document.getElementById('admin-total-orders').textContent = currentUser.orders.length;
+            const totalProductsElem = document.getElementById('admin-total-products');
+            const totalOrdersElem = document.getElementById('admin-total-orders');
+            const totalRevenueElem = document.getElementById('admin-total-revenue');
             
-            const totalRevenue = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
-            document.getElementById('admin-total-revenue').textContent = totalRevenue.toLocaleString();
+            if (totalProductsElem) totalProductsElem.textContent = adminProducts.length;
+            if (totalOrdersElem) totalOrdersElem.textContent = currentUser.orders.length;
+            
+            if (totalRevenueElem) {
+                const totalRevenue = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
+                totalRevenueElem.textContent = totalRevenue.toLocaleString();
+            }
         }
 
         // Product CRUD Operations
@@ -989,6 +1306,11 @@
                 adminProducts = adminProducts.filter(p => p.id !== productId);
                 allProducts = allProducts.filter(p => p.id !== productId);
                 
+                // Send real-time notification
+                if (socket && socket.connected) {
+                    socket.emit('product-deleted', productId);
+                }
+                
                 // Update UI
                 renderAdminProductsTable();
                 renderAllProducts();
@@ -997,9 +1319,6 @@
                 updateProductCount();
                 
                 showNotification('Product deleted successfully');
-                
-                // In a real app, you would call your backend API here
-                // fetch(`/api/products/${productId}`, { method: 'DELETE' })
             }
         }
 
@@ -1021,8 +1340,14 @@
                 // Update existing product
                 const index = adminProducts.findIndex(p => p.id === parseInt(productId));
                 if (index !== -1) {
-                    adminProducts[index] = { ...adminProducts[index], ...productData };
-                    allProducts = allProducts.map(p => p.id === parseInt(productId) ? { ...p, ...productData } : p);
+                    const updatedProduct = { ...adminProducts[index], ...productData, id: parseInt(productId) };
+                    adminProducts[index] = updatedProduct;
+                    allProducts = allProducts.map(p => p.id === parseInt(productId) ? updatedProduct : p);
+                    
+                    // Send real-time update
+                    if (socket && socket.connected) {
+                        socket.emit('product-updated', updatedProduct);
+                    }
                 }
                 showNotification('Product updated successfully');
             } else {
@@ -1031,6 +1356,12 @@
                 const newProduct = { id: newId, ...productData };
                 adminProducts.push(newProduct);
                 allProducts.push(newProduct);
+                
+                // Send real-time update
+                if (socket && socket.connected) {
+                    socket.emit('product-updated', newProduct);
+                }
+                
                 showNotification('Product added successfully');
             }
             
@@ -1043,16 +1374,9 @@
             
             // Close modal
             document.getElementById('product-modal').classList.remove('active');
-            
-            // In a real app, you would call your backend API here
-            // if (productId) {
-            //     fetch(`/api/products/${productId}`, { method: 'PUT', body: JSON.stringify(productData) })
-            // } else {
-            //     fetch('/api/products', { method: 'POST', body: JSON.stringify(productData) })
-            // }
         }
 
-        // Shopping Cart Functions (keep existing)
+        // Shopping Cart Functions
         function addToCart(productId) {
             if (!currentUser.isLoggedIn) {
                 showNotification('Please login to add items to cart');
@@ -1249,7 +1573,7 @@
                 document.getElementById('product-modal').classList.remove('active');
             });
             
-            // Checkout (existing)
+            // Checkout
             const checkoutBtn = document.getElementById('checkout-btn');
             const cancelCheckoutBtn = document.getElementById('cancel-checkout');
             const checkoutModal = document.getElementById('checkout-modal');
@@ -1326,7 +1650,8 @@
                 date: new Date().toLocaleDateString(),
                 items: [...shoppingCart],
                 total: shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                status: 'processing'
+                status: 'processing',
+                userId: currentUser.id
             };
             
             currentUser.orders.push(order);
@@ -1340,6 +1665,11 @@
             
             // Close modal
             document.getElementById('checkout-modal').classList.remove('active');
+            
+            // Send real-time notification
+            if (socket && socket.connected) {
+                socket.emit('new-order', order);
+            }
             
             // Show success message
             alert(`Order #${order.id} placed successfully! Total: ksh. ${order.total.toLocaleString()}`);
@@ -1387,353 +1717,19 @@
             `).join('');
         }
 
+        // Make functions globally available
+        window.addToCart = addToCart;
+        window.removeFromCart = removeFromCart;
+        window.updateQuantity = updateQuantity;
+        window.viewProductDetails = viewProductDetails;
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
+
         // Initialize the app
         window.addEventListener('DOMContentLoaded', function() {
             initApp();
             console.log('ShopSmart E-commerce initialized');
         });
     </script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script>
-// ========== REAL-TIME SOCKET.IO INTEGRATION ==========
-let socket = null;
-
-// Initialize Socket.io connection
-function initializeSocket() {
-    const BACKEND_URL = "https://ecommerce-backend-jnb5.onrender.com";
-    
-    // Connect to Socket.io server
-    socket = io(BACKEND_URL, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000
-    });
-    
-    // Connection events
-    socket.on('connect', () => {
-        console.log('🔌 Connected to real-time server');
-        
-        // Join appropriate room based on user role
-        if (currentUser.isLoggedIn) {
-            if (currentUser.isAdmin) {
-                socket.emit('join-admin');
-                console.log('👨‍💼 Joined admin room');
-            } else {
-                socket.emit('join-customer', currentUser.id);
-                console.log('🛒 Joined customer room');
-            }
-        }
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('🔌 Disconnected from real-time server');
-    });
-    
-    socket.on('connect_error', (error) => {
-        console.error('❌ Socket connection error:', error);
-    });
-    
-    // ========== REAL-TIME EVENTS ==========
-    
-    // New order notification (for admin)
-    socket.on('order-created', (orderData) => {
-        if (currentUser.isAdmin) {
-            showNotification(`🛍️ New Order #${orderData.orderId} received!`);
-            updateAdminOrders(orderData);
-        }
-    });
-    
-    // Order confirmed (for customer)
-    socket.on('order-confirmed', (orderData) => {
-        if (!currentUser.isAdmin && currentUser.id === orderData.userId) {
-            showNotification(`✅ Order #${orderData.orderId} confirmed!`);
-        }
-    });
-    
-    // Product updated (for everyone)
-    socket.on('product-changed', (productData) => {
-        console.log('📦 Product updated in real-time:', productData.name);
-        
-        // Update local products array
-        const index = allProducts.findIndex(p => p.id === productData.id);
-        if (index !== -1) {
-            allProducts[index] = productData;
-        } else {
-            allProducts.push(productData);
-        }
-        
-        // Refresh product displays
-        renderAllProducts();
-        renderFeaturedProducts();
-        
-        if (currentUser.isAdmin) {
-            renderAdminProductsTable();
-        }
-        
-        showNotification(`📦 ${productData.name} updated`);
-    });
-    
-    // Product deleted (for everyone)
-    socket.on('product-removed', (productId) => {
-        console.log('🗑️ Product removed in real-time:', productId);
-        
-        // Remove from local array
-        allProducts = allProducts.filter(p => p.id !== productId);
-        
-        // Refresh displays
-        renderAllProducts();
-        renderFeaturedProducts();
-        
-        if (currentUser.isAdmin) {
-            adminProducts = adminProducts.filter(p => p.id !== productId);
-            renderAdminProductsTable();
-            updateAdminStats();
-        }
-        
-        showNotification('🗑️ Product removed');
-    });
-    
-    // Real-time chat
-    socket.on('receive-chat-message', (messageData) => {
-        // Add message to chatbot UI
-        if (window.addChatMessage) {
-            addChatMessage(messageData.message, 'bot');
-        }
-    });
-    
-    // Live visitor count
-    socket.on('visitor-count', (count) => {
-        updateVisitorCount(count);
-    });
-}
-
-// ========== REAL-TIME FUNCTIONS ==========
-
-// Send new order to server
-function sendNewOrder(orderData) {
-    if (socket && socket.connected) {
-        socket.emit('new-order', {
-            ...orderData,
-            userId: currentUser.id,
-            timestamp: new Date()
-        });
-    }
-}
-
-// Send product update to server
-function sendProductUpdate(productData) {
-    if (socket && socket.connected) {
-        socket.emit('product-updated', productData);
-    }
-}
-
-// Send product deletion to server
-function sendProductDelete(productId) {
-    if (socket && socket.connected) {
-        socket.emit('product-deleted', productId);
-    }
-}
-
-// Send chat message to server
-function sendChatMessage(message) {
-    if (socket && socket.connected) {
-        socket.emit('send-chat-message', {
-            userId: currentUser.id,
-            message: message,
-            timestamp: new Date()
-        });
-    }
-}
-
-// Update visitor count display
-function updateVisitorCount(count) {
-    const visitorElement = document.getElementById('live-visitors');
-    if (visitorElement) {
-        visitorElement.textContent = count;
-    }
-}
-
-// Update admin orders in real-time
-function updateAdminOrders(orderData) {
-    const ordersTable = document.getElementById('admin-orders-table');
-    if (ordersTable && currentUser.isAdmin) {
-        // Add new order to table
-        const newRow = `
-            <tr>
-                <td>#${orderData.orderId}</td>
-                <td>Customer ${orderData.userId}</td>
-                <td>${new Date().toLocaleDateString()}</td>
-                <td>ksh. ${orderData.total.toLocaleString()}</td>
-                <td><span class="order-status status-pending">Pending</span></td>
-                <td>
-                    <button class="btn-secondary" onclick="viewOrderDetails(${orderData.orderId})">View</button>
-                </td>
-            </tr>
-        `;
-        
-        // Add to beginning of table
-        const existingRows = ordersTable.innerHTML;
-        ordersTable.innerHTML = newRow + existingRows;
-        
-        // Update admin stats
-        updateAdminStats();
-    }
-}
-
-// ========== UPDATE EXISTING FUNCTIONS ==========
-
-// Update your existing processOrder() function:
-function processOrder() {
-    const order = {
-        id: Date.now(),
-        date: new Date().toLocaleDateString(),
-        items: [...shoppingCart],
-        total: shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        status: 'processing'
-    };
-    
-    currentUser.orders.push(order);
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    
-    // Clear cart
-    shoppingCart = [];
-    saveCart();
-    updateCartDisplay();
-    renderCart();
-    
-    // Close modal
-    document.getElementById('checkout-modal').classList.remove('active');
-    
-    // Send real-time notification
-    sendNewOrder(order);
-    
-    // Show success message
-    alert(`Order #${order.id} placed successfully! Total: ksh. ${order.total.toLocaleString()}`);
-    
-    // Update dashboard
-    updateDashboard();
-    
-    // Show dashboard
-    showPage('dashboard');
-}
-
-// Update your saveProduct() function:
-function saveProduct(event) {
-    event.preventDefault();
-    
-    const productId = document.getElementById('product-id').value;
-    const productData = {
-        name: document.getElementById('product-name').value,
-        price: parseFloat(document.getElementById('product-price').value),
-        category: document.getElementById('product-category').value,
-        stock_quantity: parseInt(document.getElementById('product-stock').value),
-        image_url: document.getElementById('product-image').value || undefined,
-        description: document.getElementById('product-description').value,
-        featured: document.getElementById('product-featured').value === 'true'
-    };
-    
-    if (productId) {
-        // Update existing product
-        const index = adminProducts.findIndex(p => p.id === parseInt(productId));
-        if (index !== -1) {
-            const updatedProduct = { ...adminProducts[index], ...productData };
-            adminProducts[index] = updatedProduct;
-            allProducts = allProducts.map(p => p.id === parseInt(productId) ? updatedProduct : p);
-            
-            // Send real-time update
-            sendProductUpdate(updatedProduct);
-        }
-        showNotification('Product updated successfully');
-    } else {
-        // Add new product
-        const newId = Math.max(...adminProducts.map(p => p.id), 0) + 1;
-        const newProduct = { id: newId, ...productData };
-        adminProducts.push(newProduct);
-        allProducts.push(newProduct);
-        
-        // Send real-time update
-        sendProductUpdate(newProduct);
-        
-        showNotification('Product added successfully');
-    }
-    
-    // Update UI
-    renderAdminProductsTable();
-    renderAllProducts();
-    renderFeaturedProducts();
-    updateAdminStats();
-    updateProductCount();
-    
-    // Close modal
-    document.getElementById('product-modal').classList.remove('active');
-}
-
-// Update your deleteProduct() function:
-function deleteProduct(productId) {
-    if (confirm('Are you sure you want to delete this product?')) {
-        // Remove from local array
-        adminProducts = adminProducts.filter(p => p.id !== productId);
-        allProducts = allProducts.filter(p => p.id !== productId);
-        
-        // Send real-time delete notification
-        sendProductDelete(productId);
-        
-        // Update UI
-        renderAdminProductsTable();
-        renderAllProducts();
-        renderFeaturedProducts();
-        updateAdminStats();
-        updateProductCount();
-        
-        showNotification('Product deleted successfully');
-    }
-}
-
-// Update your chatbot sendMessage() function:
-function sendChatMessageToAI(message) {
-    if (socket && socket.connected) {
-        // Send to server for AI processing
-        sendChatMessage(message);
-    } else {
-        // Fallback to local AI
-        setTimeout(() => {
-            const aiResponse = generateAIResponse(message);
-            addMessage(aiResponse, 'bot');
-        }, 500);
-    }
-}
-
-// ========== INITIALIZE SOCKET ON LOGIN ==========
-function loginUser(userData) {
-    currentUser = {
-        isLoggedIn: true,
-        isAdmin: userData.isAdmin,
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        orders: currentUser.orders || []
-    };
-    
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    updateUserUI();
-    
-    // Initialize socket connection after login
-    if (socket) {
-        socket.disconnect();
-    }
-    initializeSocket();
-    
-    showPage('home');
-    showNotification(`Welcome back, ${userData.name}!`);
-}
-
-// ========== UPDATE HTML FOR LIVE INDICATORS ==========
-// Add this to your header or sidebar:
-// <div style="display: inline-block; margin-left: 15px; font-size: 0.9rem;">
-//     <span>👥 Live: <span id="live-visitors">1</span></span>
-//     <span style="margin-left: 10px;">🔌 <span id="connection-status">Offline</span></span>
-// </div>
-</script>
 </body>
 </html>
