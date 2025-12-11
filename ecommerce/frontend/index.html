@@ -27,6 +27,28 @@
         .page { display: none; }
         .page.active { display: block; }
         
+        /* Login Page */
+        .login-container { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .login-title { text-align: center; margin-bottom: 30px; color: #007bff; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .form-input:focus { outline: none; border-color: #007bff; }
+        .login-btn { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        .login-btn:hover { background: #0056b3; }
+        .login-error { color: #dc3545; margin-top: 10px; text-align: center; }
+        .login-toggle { text-align: center; margin-top: 20px; }
+        .toggle-link { color: #007bff; cursor: pointer; text-decoration: underline; }
+        
+        /* Admin Dashboard */
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .admin-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .admin-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .admin-table th, .admin-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .admin-table th { background: #f8f9fa; font-weight: bold; color: #333; }
+        .admin-table tr:hover { background: #f8f9fa; }
+        
         /* Products Grid */
         .products { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
         .product-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
@@ -37,6 +59,8 @@
         .btn-danger:hover { background: #c82333; }
         .btn-secondary { background: #6c757d; }
         .btn-secondary:hover { background: #5a6268; }
+        .btn-warning { background: #ffc107; color: #000; }
+        .btn-warning:hover { background: #e0a800; }
         
         /* Cart & Checkout */
         .cart-items { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
@@ -68,7 +92,8 @@
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal.active { display: flex; align-items: center; justify-content: center; }
-        .modal-content { background: white; border-radius: 10px; padding: 30px; max-width: 500px; width: 90%; }
+        .modal-content { background: white; border-radius: 10px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-wide { max-width: 800px; }
         
         /* Footer */
         .footer { background: #333; color: white; text-align: center; padding: 20px; margin-top: 40px; }
@@ -139,8 +164,10 @@
                     🛒 Cart <span class="cart-count" id="cart-count">0</span>
                 </a>
                 <a href="#" class="nav-link" data-page="dashboard">Dashboard</a>
+                <a href="#" class="nav-link" data-page="admin" id="admin-link" style="display: none;">Admin</a>
                 <div class="user-menu">
                     <span id="user-greeting">Guest</span>
+                    <button id="logout-btn" style="display: none; margin-left: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Logout</button>
                 </div>
             </div>
         </div>
@@ -150,7 +177,7 @@
     <!-- Main Content Area -->
     <div class="main-content">
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <h3>Categories</h3>
             <ul id="category-list" style="list-style: none; padding: 10px 0;">
                 <li><button class="category-btn active" data-category="all">All Products</button></li>
@@ -174,8 +201,60 @@
 
         <!-- Page Content -->
         <div class="content-area">
+            <!-- Login Page -->
+            <div id="login-page" class="page active">
+                <div class="login-container">
+                    <h1 class="login-title">🔐 ShopSmart Login</h1>
+                    
+                    <!-- Customer Login -->
+                    <div id="customer-login">
+                        <h2 style="margin-bottom: 20px; color: #333;">Customer Login</h2>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="customer-email" class="form-input" placeholder="customer@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="customer-password" class="form-input" placeholder="Enter password">
+                        </div>
+                        <button class="login-btn" id="customer-login-btn">Login as Customer</button>
+                        <div class="login-toggle">
+                            <span>Admin? </span>
+                            <span class="toggle-link" id="show-admin-login">Click here</span>
+                        </div>
+                        <div class="login-error" id="customer-login-error"></div>
+                    </div>
+                    
+                    <!-- Admin Login (Hidden by default) -->
+                    <div id="admin-login" style="display: none;">
+                        <h2 style="margin-bottom: 20px; color: #333;">Admin Login</h2>
+                        <div class="form-group">
+                            <label class="form-label">Admin Email</label>
+                            <input type="email" id="admin-email" class="form-input" placeholder="admin@shopsmart.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="admin-password" class="form-input" placeholder="Enter admin password">
+                        </div>
+                        <button class="login-btn" id="admin-login-btn" style="background: #dc3545;">Login as Admin</button>
+                        <div class="login-toggle">
+                            <span>Customer? </span>
+                            <span class="toggle-link" id="show-customer-login">Click here</span>
+                        </div>
+                        <div class="login-error" id="admin-login-error"></div>
+                    </div>
+                    
+                    <!-- Demo Credentials -->
+                    <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 0.9rem;">
+                        <h4>Demo Credentials:</h4>
+                        <p><strong>Customer:</strong> demo@example.com / password123</p>
+                        <p><strong>Admin:</strong> admin@shopsmart.com / admin123</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Home Page -->
-            <div id="home-page" class="page active">
+            <div id="home-page" class="page">
                 <h1>Welcome to ShopSmart</h1>
                 <p>Your AI-powered shopping destination</p>
                 
@@ -297,6 +376,89 @@
                 </div>
             </div>
 
+            <!-- Admin Dashboard Page -->
+            <div id="admin-page" class="page">
+                <div class="admin-header">
+                    <h1>🛠️ Admin Dashboard</h1>
+                    <div>
+                        <button class="btn" id="add-product-btn">➕ Add New Product</button>
+                        <button class="btn-secondary" id="refresh-admin-btn">🔄 Refresh</button>
+                    </div>
+                </div>
+                
+                <!-- Admin Stats -->
+                <div class="dashboard-cards">
+                    <div class="dashboard-card">
+                        <h3>Total Products</h3>
+                        <div class="value" id="admin-total-products">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Total Orders</h3>
+                        <div class="value" id="admin-total-orders">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Total Revenue</h3>
+                        <div class="value">ksh. <span id="admin-total-revenue">0</span></div>
+                    </div>
+                </div>
+                
+                <!-- Products Management -->
+                <div class="admin-card">
+                    <h2>📦 Product Management</h2>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Price (KSH)</th>
+                                <th>Category</th>
+                                <th>Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-products-table">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading products...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Orders Management -->
+                <div class="admin-card">
+                    <h2>📋 Order Management</h2>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-table">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading orders...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="admin-card">
+                    <h2>⚡ Quick Actions</h2>
+                    <div class="admin-actions">
+                        <button class="btn" id="export-products-btn">📥 Export Products</button>
+                        <button class="btn-secondary" id="backup-data-btn">💾 Backup Data</button>
+                        <button class="btn-warning" id="clear-cache-btn">🧹 Clear Cache</button>
+                        <button class="btn-danger" id="reset-demo-btn">🔄 Reset Demo Data</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Checkout Modal -->
             <div id="checkout-modal" class="modal">
                 <div class="modal-content">
@@ -334,6 +496,65 @@
                             <button type="button" class="btn-secondary" id="cancel-checkout">Cancel</button>
                             <button type="submit" class="btn">Place Order</button>
                         </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Add/Edit Product Modal -->
+            <div id="product-modal" class="modal">
+                <div class="modal-content modal-wide">
+                    <h2 id="product-modal-title">Add New Product</h2>
+                    <form id="product-form">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <div class="form-group">
+                                    <label class="form-label">Product Name *</label>
+                                    <input type="text" id="product-name" class="form-input" required placeholder="Wireless Headphones">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Price (KSH) *</label>
+                                    <input type="number" id="product-price" class="form-input" required placeholder="30000" min="0" step="100">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Category *</label>
+                                    <select id="product-category" class="form-input" required>
+                                        <option value="">Select Category</option>
+                                        <option value="Electronics">Electronics</option>
+                                        <option value="Sports">Sports</option>
+                                        <option value="Home">Home</option>
+                                        <option value="Accessories">Accessories</option>
+                                        <option value="Fashion">Fashion</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="form-group">
+                                    <label class="form-label">Stock Quantity *</label>
+                                    <input type="number" id="product-stock" class="form-input" required placeholder="50" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Image URL</label>
+                                    <input type="text" id="product-image" class="form-input" placeholder="https://images.unsplash.com/photo-...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Featured</label>
+                                    <select id="product-featured" class="form-input">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea id="product-description" class="form-input" rows="4" placeholder="Product description..."></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="button" class="btn-secondary" id="cancel-product">Cancel</button>
+                            <button type="submit" class="btn" id="save-product-btn">Save Product</button>
+                        </div>
+                        <input type="hidden" id="product-id">
                     </form>
                 </div>
             </div>
@@ -386,156 +607,58 @@
 
     <script>
         // ========== CHATBOT FUNCTIONALITY ==========
-        let isChatOpen = false;
-        const chatbotModal = document.getElementById('chatbot-modal');
-        const chatMessages = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input');
-        const sendChatBtn = document.getElementById('send-chat');
-        const closeChatBtn = document.getElementById('close-chat');
-
-        // Fix: Make sure these elements exist
-        if (chatbotModal && chatMessages && chatInput) {
-            // AI Responses
-            const aiResponses = {
-                'product': "We have a wide range of products including electronics, sports gear, home appliances, and accessories. All prices are in Kenyan Shillings (KSH)!",
-                'order': "To track your order, please check your account dashboard or contact support with your order number.",
-                'shipping': "We offer free shipping on orders over KSH 10,000. Standard delivery takes 3-5 business days. Express shipping is available for KSH 1,500.",
-                'return': "We have a 30-day return policy. Items must be in original condition with tags. Start returns from your order history.",
-                'price': "Our prices are competitive and we offer regular discounts. Check our promotions page for current offers!",
-                'payment': "We accept MPesa, credit cards, and mobile banking. All payments are secure.",
-                'default': "I'm here to help with products, orders, shipping, returns, and general questions. What would you like to know?"
-            };
-
-            // Toggle chat window
-            document.getElementById('chat-btn').addEventListener('click', function() {
-                isChatOpen = !isChatOpen;
-                chatbotModal.style.display = isChatOpen ? 'block' : 'none';
-                if (isChatOpen) {
-                    chatInput.focus();
-                }
-            });
-
-            // Close chat
-            if (closeChatBtn) {
-                closeChatBtn.addEventListener('click', function() {
-                    isChatOpen = false;
-                    chatbotModal.style.display = 'none';
-                });
-            }
-
-            // Send message function
-            function sendMessage() {
-                const message = chatInput.value.trim();
-                if (!message) return;
-                
-                // Add user message
-                addMessage(message, 'user');
-                chatInput.value = '';
-                
-                // Generate AI response
-                setTimeout(() => {
-                    const aiResponse = generateAIResponse(message);
-                    addMessage(aiResponse, 'bot');
-                }, 500);
-            }
-
-            // Generate AI response
-            function generateAIResponse(message) {
-                const msg = message.toLowerCase();
-                
-                if (msg.includes('product') || msg.includes('item') || msg.includes('buy')) {
-                    return aiResponses.product;
-                } else if (msg.includes('order') || msg.includes('track') || msg.includes('delivery')) {
-                    return aiResponses.order;
-                } else if (msg.includes('shipping') || msg.includes('deliver') || msg.includes('arrive')) {
-                    return aiResponses.shipping;
-                } else if (msg.includes('return') || msg.includes('refund') || msg.includes('exchange')) {
-                    return aiResponses.return;
-                } else if (msg.includes('price') || msg.includes('cost') || msg.includes('expensive')) {
-                    return aiResponses.price;
-                } else if (msg.includes('payment') || msg.includes('pay') || msg.includes('mpesa')) {
-                    return aiResponses.payment;
-                } else if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
-                    return "Hello! I'm your AI shopping assistant. How can I help you today?";
-                } else {
-                    return aiResponses.default;
-                }
-            }
-
-            // Add message to chat
-            function addMessage(text, sender) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${sender}`;
-                messageDiv.style.background = sender === 'user' ? '#007bff' : '#f1f1f1';
-                messageDiv.style.color = sender === 'user' ? 'white' : 'black';
-                messageDiv.style.padding = '10px';
-                messageDiv.style.borderRadius = '10px';
-                messageDiv.style.marginBottom = '10px';
-                messageDiv.style.maxWidth = '80%';
-                messageDiv.style.marginLeft = sender === 'user' ? 'auto' : '0';
-                messageDiv.textContent = text;
-                
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            // Event listeners
-            if (sendChatBtn) {
-                sendChatBtn.addEventListener('click', sendMessage);
-            }
-            
-            if (chatInput) {
-                chatInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') sendMessage();
-                });
-            }
-
-            // Quick question buttons
-            document.querySelectorAll('.quick-question').forEach(button => {
-                button.addEventListener('click', function() {
-                    const question = this.getAttribute('data-question');
-                    chatInput.value = question;
-                    sendMessage();
-                });
-            });
-        } else {
-            console.log('Chatbot elements not found');
-        }
+        // (Keep your existing chatbot code here - it's already working)
     </script>
 
     <script>
-        // ========== E-COMMERCE CORE FUNCTIONALITY ==========
+        // ========== E-COMMERCE & ADMIN FUNCTIONALITY ==========
         
-        // Shopping Cart System
-        let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
-        let allProducts = [];
-        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {
-            name: "Guest User",
+        // User Management
+        let currentUser = {
+            isLoggedIn: false,
+            isAdmin: false,
+            id: null,
             email: "guest@example.com",
+            name: "Guest User",
             orders: []
         };
 
+        // Shopping Cart System
+        let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
+        let allProducts = [];
+        let adminProducts = [];
+
         // DOM Elements
         const pages = {
+            login: document.getElementById('login-page'),
             home: document.getElementById('home-page'),
             products: document.getElementById('products-page'),
             cart: document.getElementById('cart-page'),
-            dashboard: document.getElementById('dashboard-page')
+            dashboard: document.getElementById('dashboard-page'),
+            admin: document.getElementById('admin-page')
         };
 
         // Initialize the application
         function initApp() {
-            setupNavigation();
+            checkLoginStatus();
             loadProducts();
             updateCartDisplay();
-            updateDashboard();
             setupEventListeners();
             
-            // Set initial active page
-            showPage('home');
-            
-            // Setup category filters after products load
-            setupCategoryFilters();
+            // Start on login page
+            showPage('login');
+        }
+
+        // Check if user is logged in
+        function checkLoginStatus() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                if (currentUser.isLoggedIn) {
+                    updateUserUI();
+                    showPage('home');
+                }
+            }
         }
 
         // Page Navigation
@@ -555,17 +678,121 @@
                 renderCart();
             } else if (pageId === 'dashboard') {
                 updateDashboard();
+            } else if (pageId === 'admin') {
+                loadAdminData();
+            }
+            
+            // Hide/show sidebar based on page
+            const sidebar = document.getElementById('sidebar');
+            if (pageId === 'login') {
+                sidebar.style.display = 'none';
+            } else {
+                sidebar.style.display = 'block';
             }
         }
 
-        function setupNavigation() {
-            document.querySelectorAll('[data-page]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const pageId = this.getAttribute('data-page');
-                    showPage(pageId);
-                });
+        // Login System
+        function setupLoginListeners() {
+            // Customer login
+            document.getElementById('customer-login-btn').addEventListener('click', function() {
+                const email = document.getElementById('customer-email').value;
+                const password = document.getElementById('customer-password').value;
+                
+                if (email === 'demo@example.com' && password === 'password123') {
+                    loginUser({
+                        id: 1,
+                        email: email,
+                        name: 'Demo Customer',
+                        isAdmin: false
+                    });
+                } else {
+                    document.getElementById('customer-login-error').textContent = 'Invalid credentials. Use: demo@example.com / password123';
+                }
             });
+            
+            // Admin login
+            document.getElementById('admin-login-btn').addEventListener('click', function() {
+                const email = document.getElementById('admin-email').value;
+                const password = document.getElementById('admin-password').value;
+                
+                if (email === 'admin@shopsmart.com' && password === 'admin123') {
+                    loginUser({
+                        id: 999,
+                        email: email,
+                        name: 'Admin User',
+                        isAdmin: true
+                    });
+                } else {
+                    document.getElementById('admin-login-error').textContent = 'Invalid credentials. Use: admin@shopsmart.com / admin123';
+                }
+            });
+            
+            // Toggle between customer/admin login
+            document.getElementById('show-admin-login').addEventListener('click', function() {
+                document.getElementById('customer-login').style.display = 'none';
+                document.getElementById('admin-login').style.display = 'block';
+            });
+            
+            document.getElementById('show-customer-login').addEventListener('click', function() {
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('customer-login').style.display = 'block';
+            });
+            
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', logoutUser);
+        }
+
+        function loginUser(userData) {
+            currentUser = {
+                isLoggedIn: true,
+                isAdmin: userData.isAdmin,
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                orders: currentUser.orders || []
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            updateUserUI();
+            showPage('home');
+            showNotification(`Welcome back, ${userData.name}!`);
+        }
+
+        function logoutUser() {
+            currentUser = {
+                isLoggedIn: false,
+                isAdmin: false,
+                id: null,
+                email: "guest@example.com",
+                name: "Guest User",
+                orders: []
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            updateUserUI();
+            showPage('login');
+            showNotification('Logged out successfully');
+        }
+
+        function updateUserUI() {
+            // Update greeting
+            document.getElementById('user-greeting').textContent = currentUser.name;
+            
+            // Show/hide logout button
+            const logoutBtn = document.getElementById('logout-btn');
+            if (currentUser.isLoggedIn) {
+                logoutBtn.style.display = 'inline-block';
+            } else {
+                logoutBtn.style.display = 'none';
+            }
+            
+            // Show/hide admin link
+            const adminLink = document.getElementById('admin-link');
+            if (currentUser.isAdmin) {
+                adminLink.style.display = 'block';
+            } else {
+                adminLink.style.display = 'none';
+            }
         }
 
         // Product Management
@@ -579,40 +806,7 @@
                     allProducts = data.products;
                 } else {
                     // Fallback to demo products
-                    allProducts = [
-                        { 
-                            id: 1, 
-                            name: 'Wireless Headphones', 
-                            price: 30000, 
-                            category: 'Electronics', 
-                            image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop',
-                            description: 'Premium wireless headphones with noise cancellation' 
-                        },
-                        { 
-                            id: 2, 
-                            name: 'Smart Watch', 
-                            price: 45000, 
-                            category: 'Electronics', 
-                            image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop',
-                            description: 'Fitness tracker with heart rate monitor' 
-                        },
-                        { 
-                            id: 3, 
-                            name: 'Running Shoes', 
-                            price: 13500, 
-                            category: 'Sports', 
-                            image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop',
-                            description: 'Professional running shoes with cushioning' 
-                        },
-                        { 
-                            id: 4, 
-                            name: 'Coffee Maker', 
-                            price: 22500, 
-                            category: 'Home', 
-                            image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop',
-                            description: 'Automatic coffee maker with grinder' 
-                        }
-                    ];
+                    allProducts = getDemoProducts();
                 }
                 
                 renderAllProducts();
@@ -620,41 +814,56 @@
                 updateProductCount();
             } catch (error) {
                 console.error('Error loading products:', error);
-                // Use demo products if backend fails
-                allProducts = [
-                    { 
-                        id: 1, 
-                        name: 'Wireless Headphones', 
-                        price: 30000, 
-                        category: 'Electronics', 
-                        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop' 
-                    },
-                    { 
-                        id: 2, 
-                        name: 'Smart Watch', 
-                        price: 45000, 
-                        category: 'Electronics', 
-                        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop' 
-                    },
-                    { 
-                        id: 3, 
-                        name: 'Running Shoes', 
-                        price: 13500, 
-                        category: 'Sports', 
-                        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop' 
-                    },
-                    { 
-                        id: 4, 
-                        name: 'Coffee Maker', 
-                        price: 22500, 
-                        category: 'Home', 
-                        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop' 
-                    }
-                ];
+                allProducts = getDemoProducts();
                 renderAllProducts();
                 renderFeaturedProducts();
                 updateProductCount();
             }
+        }
+
+        function getDemoProducts() {
+            return [
+                { 
+                    id: 1, 
+                    name: 'Wireless Headphones', 
+                    price: 30000, 
+                    category: 'Electronics', 
+                    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop',
+                    description: 'Premium wireless headphones with noise cancellation',
+                    stock_quantity: 50,
+                    featured: true
+                },
+                { 
+                    id: 2, 
+                    name: 'Smart Watch', 
+                    price: 45000, 
+                    category: 'Electronics', 
+                    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop',
+                    description: 'Fitness tracker with heart rate monitor',
+                    stock_quantity: 30,
+                    featured: true
+                },
+                { 
+                    id: 3, 
+                    name: 'Running Shoes', 
+                    price: 13500, 
+                    category: 'Sports', 
+                    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop',
+                    description: 'Professional running shoes with cushioning',
+                    stock_quantity: 100,
+                    featured: false
+                },
+                { 
+                    id: 4, 
+                    name: 'Coffee Maker', 
+                    price: 22500, 
+                    category: 'Home', 
+                    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop',
+                    description: 'Automatic coffee maker with grinder',
+                    stock_quantity: 25,
+                    featured: true
+                }
+            ];
         }
 
         // ========== PRODUCT RENDERING FUNCTION ==========
@@ -694,7 +903,7 @@
             const container = document.getElementById('featured-products');
             if (!container) return;
             
-            const featured = allProducts.slice(0, 3);
+            const featured = allProducts.filter(p => p.featured).slice(0, 3);
             container.innerHTML = featured.map(product => `
                 <div class="product-card">
                     ${renderProductCard(product)}
@@ -704,8 +913,153 @@
             document.getElementById('total-products').textContent = allProducts.length;
         }
 
-        // Shopping Cart Functions
+        // ========== ADMIN FUNCTIONS ==========
+        function loadAdminData() {
+            // Load products for admin table
+            adminProducts = [...allProducts];
+            renderAdminProductsTable();
+            updateAdminStats();
+        }
+
+        function renderAdminProductsTable() {
+            const tableBody = document.getElementById('admin-products-table');
+            if (!tableBody) return;
+            
+            if (adminProducts.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="text-center">No products found</td></tr>`;
+                return;
+            }
+            
+            tableBody.innerHTML = adminProducts.map(product => `
+                <tr>
+                    <td>${product.id}</td>
+                    <td>
+                        <img src="${product.image || product.image_url || 'https://via.placeholder.com/50'}" 
+                             alt="${product.name}" 
+                             style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                    </td>
+                    <td><strong>${product.name}</strong></td>
+                    <td>ksh. ${product.price.toLocaleString()}</td>
+                    <td><span style="padding: 5px 10px; background: #e9ecef; border-radius: 15px;">${product.category}</span></td>
+                    <td>${product.stock_quantity || 0}</td>
+                    <td>
+                        <button class="btn-secondary" onclick="editProduct(${product.id})" style="padding: 5px 10px; font-size: 0.9rem;">Edit</button>
+                        <button class="btn-danger" onclick="deleteProduct(${product.id})" style="padding: 5px 10px; font-size: 0.9rem;">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateAdminStats() {
+            document.getElementById('admin-total-products').textContent = adminProducts.length;
+            document.getElementById('admin-total-orders').textContent = currentUser.orders.length;
+            
+            const totalRevenue = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
+            document.getElementById('admin-total-revenue').textContent = totalRevenue.toLocaleString();
+        }
+
+        // Product CRUD Operations
+        function addProduct() {
+            document.getElementById('product-modal-title').textContent = 'Add New Product';
+            document.getElementById('product-form').reset();
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        function editProduct(productId) {
+            const product = adminProducts.find(p => p.id === productId);
+            if (!product) return;
+            
+            document.getElementById('product-modal-title').textContent = 'Edit Product';
+            document.getElementById('product-id').value = product.id;
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('product-category').value = product.category;
+            document.getElementById('product-stock').value = product.stock_quantity || 0;
+            document.getElementById('product-image').value = product.image || product.image_url || '';
+            document.getElementById('product-description').value = product.description || '';
+            document.getElementById('product-featured').value = product.featured || 'false';
+            
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        function deleteProduct(productId) {
+            if (confirm('Are you sure you want to delete this product?')) {
+                // Remove from local array
+                adminProducts = adminProducts.filter(p => p.id !== productId);
+                allProducts = allProducts.filter(p => p.id !== productId);
+                
+                // Update UI
+                renderAdminProductsTable();
+                renderAllProducts();
+                renderFeaturedProducts();
+                updateAdminStats();
+                updateProductCount();
+                
+                showNotification('Product deleted successfully');
+                
+                // In a real app, you would call your backend API here
+                // fetch(`/api/products/${productId}`, { method: 'DELETE' })
+            }
+        }
+
+        function saveProduct(event) {
+            event.preventDefault();
+            
+            const productId = document.getElementById('product-id').value;
+            const productData = {
+                name: document.getElementById('product-name').value,
+                price: parseFloat(document.getElementById('product-price').value),
+                category: document.getElementById('product-category').value,
+                stock_quantity: parseInt(document.getElementById('product-stock').value),
+                image_url: document.getElementById('product-image').value || undefined,
+                description: document.getElementById('product-description').value,
+                featured: document.getElementById('product-featured').value === 'true'
+            };
+            
+            if (productId) {
+                // Update existing product
+                const index = adminProducts.findIndex(p => p.id === parseInt(productId));
+                if (index !== -1) {
+                    adminProducts[index] = { ...adminProducts[index], ...productData };
+                    allProducts = allProducts.map(p => p.id === parseInt(productId) ? { ...p, ...productData } : p);
+                }
+                showNotification('Product updated successfully');
+            } else {
+                // Add new product
+                const newId = Math.max(...adminProducts.map(p => p.id), 0) + 1;
+                const newProduct = { id: newId, ...productData };
+                adminProducts.push(newProduct);
+                allProducts.push(newProduct);
+                showNotification('Product added successfully');
+            }
+            
+            // Update UI
+            renderAdminProductsTable();
+            renderAllProducts();
+            renderFeaturedProducts();
+            updateAdminStats();
+            updateProductCount();
+            
+            // Close modal
+            document.getElementById('product-modal').classList.remove('active');
+            
+            // In a real app, you would call your backend API here
+            // if (productId) {
+            //     fetch(`/api/products/${productId}`, { method: 'PUT', body: JSON.stringify(productData) })
+            // } else {
+            //     fetch('/api/products', { method: 'POST', body: JSON.stringify(productData) })
+            // }
+        }
+
+        // Shopping Cart Functions (keep existing)
         function addToCart(productId) {
+            if (!currentUser.isLoggedIn) {
+                showNotification('Please login to add items to cart');
+                showPage('login');
+                return;
+            }
+            
             const product = allProducts.find(p => p.id === productId);
             if (!product) return;
             
@@ -808,32 +1162,162 @@
             document.getElementById('total').textContent = total.toLocaleString();
         }
 
-        // Checkout Functionality
-        function setupCheckout() {
+        // Additional Functions
+        function updateProductCount() {
+            document.getElementById('product-count').textContent = allProducts.length;
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                z-index: 3000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function viewProductDetails(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) return;
+            
+            alert(`${product.name}\n\nPrice: ksh. ${product.price.toLocaleString()}\nCategory: ${product.category}\nStock: ${product.stock_quantity || 0}\n\n${product.description || 'No description available'}`);
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Login listeners
+            setupLoginListeners();
+            
+            // Navigation
+            document.querySelectorAll('[data-page]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!currentUser.isLoggedIn && this.getAttribute('data-page') !== 'login') {
+                        showNotification('Please login first');
+                        showPage('login');
+                        return;
+                    }
+                    const pageId = this.getAttribute('data-page');
+                    if (pageId === 'admin' && !currentUser.isAdmin) {
+                        showNotification('Admin access required');
+                        return;
+                    }
+                    showPage(pageId);
+                });
+            });
+            
+            // Category filters
+            function setupCategoryFilters() {
+                const categoryButtons = document.querySelectorAll('.category-btn');
+                
+                categoryButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const category = this.getAttribute('data-category');
+                        
+                        // Remove active class from all buttons
+                        categoryButtons.forEach(btn => btn.classList.remove('active'));
+                        // Add active class to clicked button
+                        this.classList.add('active');
+                        
+                        // Show/hide products based on category
+                        filterProductsByCategory(category);
+                    });
+                });
+            }
+            
+            setupCategoryFilters();
+            
+            // Admin buttons
+            document.getElementById('add-product-btn').addEventListener('click', addProduct);
+            document.getElementById('refresh-admin-btn').addEventListener('click', loadAdminData);
+            document.getElementById('save-product-btn').addEventListener('click', saveProduct);
+            document.getElementById('cancel-product').addEventListener('click', function() {
+                document.getElementById('product-modal').classList.remove('active');
+            });
+            
+            // Checkout (existing)
             const checkoutBtn = document.getElementById('checkout-btn');
             const cancelCheckoutBtn = document.getElementById('cancel-checkout');
             const checkoutModal = document.getElementById('checkout-modal');
             const checkoutForm = document.getElementById('checkout-form');
             
-            checkoutBtn.addEventListener('click', function() {
-                if (shoppingCart.length === 0) {
-                    alert('Your cart is empty!');
-                    return;
-                }
+            if (checkoutBtn) {
+                checkoutBtn.addEventListener('click', function() {
+                    if (shoppingCart.length === 0) {
+                        alert('Your cart is empty!');
+                        return;
+                    }
+                    
+                    const total = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    document.getElementById('checkout-total').textContent = total.toLocaleString();
+                    checkoutModal.classList.add('active');
+                });
+            }
+            
+            if (cancelCheckoutBtn) {
+                cancelCheckoutBtn.addEventListener('click', function() {
+                    checkoutModal.classList.remove('active');
+                });
+            }
+            
+            if (checkoutForm) {
+                checkoutForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    processOrder();
+                });
+            }
+            
+            // Quick admin actions
+            document.getElementById('export-products-btn').addEventListener('click', function() {
+                const dataStr = JSON.stringify(adminProducts, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'products_export.json';
                 
-                const total = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                document.getElementById('checkout-total').textContent = total.toLocaleString();
-                checkoutModal.classList.add('active');
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                showNotification('Products exported successfully');
             });
             
-            cancelCheckoutBtn.addEventListener('click', function() {
-                checkoutModal.classList.remove('active');
+            document.getElementById('reset-demo-btn').addEventListener('click', function() {
+                if (confirm('Reset all demo data? This will reload demo products.')) {
+                    localStorage.removeItem('shoppingCart');
+                    localStorage.removeItem('currentUser');
+                    location.reload();
+                }
+            });
+        }
+
+        function filterProductsByCategory(category) {
+            const productCards = document.querySelectorAll('.product-card');
+            
+            let visibleCount = 0;
+            productCards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
             });
             
-            checkoutForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                processOrder();
-            });
+            document.getElementById('product-count').textContent = visibleCount;
         }
 
         function processOrder() {
@@ -867,7 +1351,6 @@
             showPage('dashboard');
         }
 
-        // Dashboard Functions
         function updateDashboard() {
             const totalOrders = currentUser.orders.length;
             const totalSpent = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
@@ -904,144 +1387,353 @@
             `).join('');
         }
 
-        // Additional Features
-        function updateProductCount() {
-            document.getElementById('product-count').textContent = allProducts.length;
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #28a745;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 5px;
-                z-index: 3000;
-                animation: slideIn 0.3s ease;
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function viewProductDetails(productId) {
-            const product = allProducts.find(p => p.id === productId);
-            if (!product) return;
-            
-            alert(`${product.name}\n\nPrice: ksh. ${product.price.toLocaleString()}\nCategory: ${product.category}\n\n${product.description || 'No description available'}`);
-        }
-
-        // Category Filter Functions
-        function setupCategoryFilters() {
-            const categoryButtons = document.querySelectorAll('.category-btn');
-            
-            categoryButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const category = this.getAttribute('data-category');
-                    
-                    // Remove active class from all buttons
-                    categoryButtons.forEach(btn => btn.classList.remove('active'));
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    // Show/hide products based on category
-                    filterProductsByCategory(category);
-                });
-            });
-        }
-
-        function filterProductsByCategory(category) {
-            const productCards = document.querySelectorAll('.product-card');
-            
-            let visibleCount = 0;
-            productCards.forEach(card => {
-                if (category === 'all' || card.getAttribute('data-category') === category) {
-                    card.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            // Update product count
-            document.getElementById('product-count').textContent = visibleCount;
-        }
-
-        function setupEventListeners() {
-            // Price filtering
-            const priceSlider = document.getElementById('price-slider');
-            const priceMax = document.getElementById('price-max');
-            
-            if (priceSlider) {
-                priceSlider.addEventListener('input', function() {
-                    const maxPrice = parseInt(this.value);
-                    priceMax.textContent = maxPrice.toLocaleString();
-                    filterProductsByPrice(maxPrice);
-                });
-            }
-            
-            // Sorting
-            const sortSelect = document.getElementById('sort-select');
-            if (sortSelect) {
-                sortSelect.addEventListener('change', function() {
-                    sortProducts(this.value);
-                });
-            }
-            
-            // Profile editing
-            const editProfileBtn = document.getElementById('edit-profile-btn');
-            if (editProfileBtn) {
-                editProfileBtn.addEventListener('click', function() {
-                    const name = prompt('Enter your name:', currentUser.name);
-                    const email = prompt('Enter your email:', currentUser.email);
-                    
-                    if (name) currentUser.name = name;
-                    if (email) currentUser.email = email;
-                    
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    updateDashboard();
-                });
-            }
-            
-            // Setup checkout
-            setupCheckout();
-        }
-
-        function filterProductsByPrice(maxPrice) {
-            // This would filter products based on price
-            console.log('Filtering by max price:', maxPrice);
-        }
-
-        function sortProducts(sortBy) {
-            switch(sortBy) {
-                case 'price-low':
-                    allProducts.sort((a, b) => a.price - b.price);
-                    break;
-                case 'price-high':
-                    allProducts.sort((a, b) => b.price - a.price);
-                    break;
-                case 'name':
-                    allProducts.sort((a, b) => a.name.localeCompare(b.name));
-                    break;
-            }
-            
-            renderAllProducts();
-            renderFeaturedProducts();
-        }
-
-        // Initialize the app when page loads
+        // Initialize the app
         window.addEventListener('DOMContentLoaded', function() {
             initApp();
-            console.log('Page loaded, initializing app...');
+            console.log('ShopSmart E-commerce initialized');
         });
     </script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+// ========== REAL-TIME SOCKET.IO INTEGRATION ==========
+let socket = null;
+
+// Initialize Socket.io connection
+function initializeSocket() {
+    const BACKEND_URL = "https://ecommerce-backend-jnb5.onrender.com";
+    
+    // Connect to Socket.io server
+    socket = io(BACKEND_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
+    
+    // Connection events
+    socket.on('connect', () => {
+        console.log('🔌 Connected to real-time server');
+        
+        // Join appropriate room based on user role
+        if (currentUser.isLoggedIn) {
+            if (currentUser.isAdmin) {
+                socket.emit('join-admin');
+                console.log('👨‍💼 Joined admin room');
+            } else {
+                socket.emit('join-customer', currentUser.id);
+                console.log('🛒 Joined customer room');
+            }
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('🔌 Disconnected from real-time server');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('❌ Socket connection error:', error);
+    });
+    
+    // ========== REAL-TIME EVENTS ==========
+    
+    // New order notification (for admin)
+    socket.on('order-created', (orderData) => {
+        if (currentUser.isAdmin) {
+            showNotification(`🛍️ New Order #${orderData.orderId} received!`);
+            updateAdminOrders(orderData);
+        }
+    });
+    
+    // Order confirmed (for customer)
+    socket.on('order-confirmed', (orderData) => {
+        if (!currentUser.isAdmin && currentUser.id === orderData.userId) {
+            showNotification(`✅ Order #${orderData.orderId} confirmed!`);
+        }
+    });
+    
+    // Product updated (for everyone)
+    socket.on('product-changed', (productData) => {
+        console.log('📦 Product updated in real-time:', productData.name);
+        
+        // Update local products array
+        const index = allProducts.findIndex(p => p.id === productData.id);
+        if (index !== -1) {
+            allProducts[index] = productData;
+        } else {
+            allProducts.push(productData);
+        }
+        
+        // Refresh product displays
+        renderAllProducts();
+        renderFeaturedProducts();
+        
+        if (currentUser.isAdmin) {
+            renderAdminProductsTable();
+        }
+        
+        showNotification(`📦 ${productData.name} updated`);
+    });
+    
+    // Product deleted (for everyone)
+    socket.on('product-removed', (productId) => {
+        console.log('🗑️ Product removed in real-time:', productId);
+        
+        // Remove from local array
+        allProducts = allProducts.filter(p => p.id !== productId);
+        
+        // Refresh displays
+        renderAllProducts();
+        renderFeaturedProducts();
+        
+        if (currentUser.isAdmin) {
+            adminProducts = adminProducts.filter(p => p.id !== productId);
+            renderAdminProductsTable();
+            updateAdminStats();
+        }
+        
+        showNotification('🗑️ Product removed');
+    });
+    
+    // Real-time chat
+    socket.on('receive-chat-message', (messageData) => {
+        // Add message to chatbot UI
+        if (window.addChatMessage) {
+            addChatMessage(messageData.message, 'bot');
+        }
+    });
+    
+    // Live visitor count
+    socket.on('visitor-count', (count) => {
+        updateVisitorCount(count);
+    });
+}
+
+// ========== REAL-TIME FUNCTIONS ==========
+
+// Send new order to server
+function sendNewOrder(orderData) {
+    if (socket && socket.connected) {
+        socket.emit('new-order', {
+            ...orderData,
+            userId: currentUser.id,
+            timestamp: new Date()
+        });
+    }
+}
+
+// Send product update to server
+function sendProductUpdate(productData) {
+    if (socket && socket.connected) {
+        socket.emit('product-updated', productData);
+    }
+}
+
+// Send product deletion to server
+function sendProductDelete(productId) {
+    if (socket && socket.connected) {
+        socket.emit('product-deleted', productId);
+    }
+}
+
+// Send chat message to server
+function sendChatMessage(message) {
+    if (socket && socket.connected) {
+        socket.emit('send-chat-message', {
+            userId: currentUser.id,
+            message: message,
+            timestamp: new Date()
+        });
+    }
+}
+
+// Update visitor count display
+function updateVisitorCount(count) {
+    const visitorElement = document.getElementById('live-visitors');
+    if (visitorElement) {
+        visitorElement.textContent = count;
+    }
+}
+
+// Update admin orders in real-time
+function updateAdminOrders(orderData) {
+    const ordersTable = document.getElementById('admin-orders-table');
+    if (ordersTable && currentUser.isAdmin) {
+        // Add new order to table
+        const newRow = `
+            <tr>
+                <td>#${orderData.orderId}</td>
+                <td>Customer ${orderData.userId}</td>
+                <td>${new Date().toLocaleDateString()}</td>
+                <td>ksh. ${orderData.total.toLocaleString()}</td>
+                <td><span class="order-status status-pending">Pending</span></td>
+                <td>
+                    <button class="btn-secondary" onclick="viewOrderDetails(${orderData.orderId})">View</button>
+                </td>
+            </tr>
+        `;
+        
+        // Add to beginning of table
+        const existingRows = ordersTable.innerHTML;
+        ordersTable.innerHTML = newRow + existingRows;
+        
+        // Update admin stats
+        updateAdminStats();
+    }
+}
+
+// ========== UPDATE EXISTING FUNCTIONS ==========
+
+// Update your existing processOrder() function:
+function processOrder() {
+    const order = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString(),
+        items: [...shoppingCart],
+        total: shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        status: 'processing'
+    };
+    
+    currentUser.orders.push(order);
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    
+    // Clear cart
+    shoppingCart = [];
+    saveCart();
+    updateCartDisplay();
+    renderCart();
+    
+    // Close modal
+    document.getElementById('checkout-modal').classList.remove('active');
+    
+    // Send real-time notification
+    sendNewOrder(order);
+    
+    // Show success message
+    alert(`Order #${order.id} placed successfully! Total: ksh. ${order.total.toLocaleString()}`);
+    
+    // Update dashboard
+    updateDashboard();
+    
+    // Show dashboard
+    showPage('dashboard');
+}
+
+// Update your saveProduct() function:
+function saveProduct(event) {
+    event.preventDefault();
+    
+    const productId = document.getElementById('product-id').value;
+    const productData = {
+        name: document.getElementById('product-name').value,
+        price: parseFloat(document.getElementById('product-price').value),
+        category: document.getElementById('product-category').value,
+        stock_quantity: parseInt(document.getElementById('product-stock').value),
+        image_url: document.getElementById('product-image').value || undefined,
+        description: document.getElementById('product-description').value,
+        featured: document.getElementById('product-featured').value === 'true'
+    };
+    
+    if (productId) {
+        // Update existing product
+        const index = adminProducts.findIndex(p => p.id === parseInt(productId));
+        if (index !== -1) {
+            const updatedProduct = { ...adminProducts[index], ...productData };
+            adminProducts[index] = updatedProduct;
+            allProducts = allProducts.map(p => p.id === parseInt(productId) ? updatedProduct : p);
+            
+            // Send real-time update
+            sendProductUpdate(updatedProduct);
+        }
+        showNotification('Product updated successfully');
+    } else {
+        // Add new product
+        const newId = Math.max(...adminProducts.map(p => p.id), 0) + 1;
+        const newProduct = { id: newId, ...productData };
+        adminProducts.push(newProduct);
+        allProducts.push(newProduct);
+        
+        // Send real-time update
+        sendProductUpdate(newProduct);
+        
+        showNotification('Product added successfully');
+    }
+    
+    // Update UI
+    renderAdminProductsTable();
+    renderAllProducts();
+    renderFeaturedProducts();
+    updateAdminStats();
+    updateProductCount();
+    
+    // Close modal
+    document.getElementById('product-modal').classList.remove('active');
+}
+
+// Update your deleteProduct() function:
+function deleteProduct(productId) {
+    if (confirm('Are you sure you want to delete this product?')) {
+        // Remove from local array
+        adminProducts = adminProducts.filter(p => p.id !== productId);
+        allProducts = allProducts.filter(p => p.id !== productId);
+        
+        // Send real-time delete notification
+        sendProductDelete(productId);
+        
+        // Update UI
+        renderAdminProductsTable();
+        renderAllProducts();
+        renderFeaturedProducts();
+        updateAdminStats();
+        updateProductCount();
+        
+        showNotification('Product deleted successfully');
+    }
+}
+
+// Update your chatbot sendMessage() function:
+function sendChatMessageToAI(message) {
+    if (socket && socket.connected) {
+        // Send to server for AI processing
+        sendChatMessage(message);
+    } else {
+        // Fallback to local AI
+        setTimeout(() => {
+            const aiResponse = generateAIResponse(message);
+            addMessage(aiResponse, 'bot');
+        }, 500);
+    }
+}
+
+// ========== INITIALIZE SOCKET ON LOGIN ==========
+function loginUser(userData) {
+    currentUser = {
+        isLoggedIn: true,
+        isAdmin: userData.isAdmin,
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        orders: currentUser.orders || []
+    };
+    
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUserUI();
+    
+    // Initialize socket connection after login
+    if (socket) {
+        socket.disconnect();
+    }
+    initializeSocket();
+    
+    showPage('home');
+    showNotification(`Welcome back, ${userData.name}!`);
+}
+
+// ========== UPDATE HTML FOR LIVE INDICATORS ==========
+// Add this to your header or sidebar:
+// <div style="display: inline-block; margin-left: 15px; font-size: 0.9rem;">
+//     <span>👥 Live: <span id="live-visitors">1</span></span>
+//     <span style="margin-left: 10px;">🔌 <span id="connection-status">Offline</span></span>
+// </div>
+</script>
 </body>
 </html>
