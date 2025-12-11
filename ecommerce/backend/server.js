@@ -64,7 +64,37 @@ async function setupDatabase() {
 }
 
 // ========== API ENDPOINTS ==========
-
+// In your /api/products endpoint or database setup
+const productsWithImages = [
+    { 
+        id: 1, 
+        name: 'Wireless Headphones', 
+        price: 30000, 
+        category: 'Electronics', 
+        image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop' 
+    },
+    { 
+        id: 2, 
+        name: 'Smart Watch', 
+        price: 45000, 
+        category: 'Electronics', 
+        image_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w-400&auto=format&fit=crop' 
+    },
+    { 
+        id: 3, 
+        name: 'Running Shoes', 
+        price: 13500, 
+        category: 'Sports', 
+        image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop' 
+    },
+    { 
+        id: 4, 
+        name: 'Coffee Maker', 
+        price: 22500, 
+        category: 'Home', 
+        image_url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop' 
+    }
+];
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date(), currency: 'KSH' });
@@ -134,7 +164,7 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
-// ========== CART ENDPOINTS ==========
+
 // ========== CART ENDPOINTS ==========
 app.get('/api/cart', (req, res) => {
   res.json({ 

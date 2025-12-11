@@ -82,6 +82,49 @@
         .text-center { text-align: center; }
         .mt-20 { margin-top: 20px; }
         .mb-20 { margin-bottom: 20px; }
+        
+        /* Category Buttons */
+        .category-btn.active {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            margin: 5px 0;
+        }
+
+        .category-btn {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+
+        .category-btn:hover {
+            background: #e9ecef;
+        }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .status-processing { background: #fff3cd; color: #856404; }
     </style>
 </head>
 <body>
@@ -110,7 +153,7 @@
         <div class="sidebar">
             <h3>Categories</h3>
             <ul id="category-list" style="list-style: none; padding: 10px 0;">
-                <li><button class="category-btn" data-category="all">All Products</button></li>
+                <li><button class="category-btn active" data-category="all">All Products</button></li>
                 <li><button class="category-btn" data-category="Electronics">Electronics</button></li>
                 <li><button class="category-btn" data-category="Sports">Sports</button></li>
                 <li><button class="category-btn" data-category="Home">Home</button></li>
@@ -298,14 +341,167 @@
     </div>
 
     <div class="footer">
-        <p>© 2024 ShopSmart. All rights reserved.</p>
+        <p>© 2025 ShopSmart. All rights reserved.</p>
     </div>
 
-    <!-- Chatbot HTML (Keep your existing chatbot code) -->
+    <!-- Chatbot HTML -->
     <div id="chatbot-modal" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 1000;">
-        <!-- Your existing chatbot HTML -->
+        <div style="background: #007bff; color: white; padding: 15px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">🤖 AI Shopping Assistant</h3>
+            <button id="close-chat" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        
+        <div id="chat-messages" style="height: 300px; overflow-y: auto; padding: 15px;">
+            <div class="message bot" style="background: #f1f1f1; padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 80%;">
+                Hello! I'm your AI shopping assistant. How can I help you today?
+            </div>
+        </div>
+        
+        <div style="padding: 15px; border-top: 1px solid #eee;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Type your message..." 
+                       style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px;">
+                <button id="send-chat" style="background: #007bff; color: white; border: none; border-radius: 20px; padding: 0 20px; cursor: pointer;">
+                    Send
+                </button>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                <button class="quick-question" data-question="What products do you have?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    What products?
+                </button>
+                <button class="quick-question" data-question="How do I track my order?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Track order
+                </button>
+                <button class="quick-question" data-question="What is your shipping policy?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Shipping info
+                </button>
+                <button class="quick-question" data-question="How do I return an item?" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 15px; padding: 5px 10px; font-size: 12px; cursor: pointer;">
+                    Returns
+                </button>
+            </div>
+        </div>
     </div>
+
     <button class="chat-btn" id="chat-btn">💬</button>
+
+    <script>
+        // ========== CHATBOT FUNCTIONALITY ==========
+        let isChatOpen = false;
+        const chatbotModal = document.getElementById('chatbot-modal');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat');
+        const closeChatBtn = document.getElementById('close-chat');
+
+        // Fix: Make sure these elements exist
+        if (chatbotModal && chatMessages && chatInput) {
+            // AI Responses
+            const aiResponses = {
+                'product': "We have a wide range of products including electronics, sports gear, home appliances, and accessories. All prices are in Kenyan Shillings (KSH)!",
+                'order': "To track your order, please check your account dashboard or contact support with your order number.",
+                'shipping': "We offer free shipping on orders over KSH 10,000. Standard delivery takes 3-5 business days. Express shipping is available for KSH 1,500.",
+                'return': "We have a 30-day return policy. Items must be in original condition with tags. Start returns from your order history.",
+                'price': "Our prices are competitive and we offer regular discounts. Check our promotions page for current offers!",
+                'payment': "We accept MPesa, credit cards, and mobile banking. All payments are secure.",
+                'default': "I'm here to help with products, orders, shipping, returns, and general questions. What would you like to know?"
+            };
+
+            // Toggle chat window
+            document.getElementById('chat-btn').addEventListener('click', function() {
+                isChatOpen = !isChatOpen;
+                chatbotModal.style.display = isChatOpen ? 'block' : 'none';
+                if (isChatOpen) {
+                    chatInput.focus();
+                }
+            });
+
+            // Close chat
+            if (closeChatBtn) {
+                closeChatBtn.addEventListener('click', function() {
+                    isChatOpen = false;
+                    chatbotModal.style.display = 'none';
+                });
+            }
+
+            // Send message function
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (!message) return;
+                
+                // Add user message
+                addMessage(message, 'user');
+                chatInput.value = '';
+                
+                // Generate AI response
+                setTimeout(() => {
+                    const aiResponse = generateAIResponse(message);
+                    addMessage(aiResponse, 'bot');
+                }, 500);
+            }
+
+            // Generate AI response
+            function generateAIResponse(message) {
+                const msg = message.toLowerCase();
+                
+                if (msg.includes('product') || msg.includes('item') || msg.includes('buy')) {
+                    return aiResponses.product;
+                } else if (msg.includes('order') || msg.includes('track') || msg.includes('delivery')) {
+                    return aiResponses.order;
+                } else if (msg.includes('shipping') || msg.includes('deliver') || msg.includes('arrive')) {
+                    return aiResponses.shipping;
+                } else if (msg.includes('return') || msg.includes('refund') || msg.includes('exchange')) {
+                    return aiResponses.return;
+                } else if (msg.includes('price') || msg.includes('cost') || msg.includes('expensive')) {
+                    return aiResponses.price;
+                } else if (msg.includes('payment') || msg.includes('pay') || msg.includes('mpesa')) {
+                    return aiResponses.payment;
+                } else if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+                    return "Hello! I'm your AI shopping assistant. How can I help you today?";
+                } else {
+                    return aiResponses.default;
+                }
+            }
+
+            // Add message to chat
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                messageDiv.style.background = sender === 'user' ? '#007bff' : '#f1f1f1';
+                messageDiv.style.color = sender === 'user' ? 'white' : 'black';
+                messageDiv.style.padding = '10px';
+                messageDiv.style.borderRadius = '10px';
+                messageDiv.style.marginBottom = '10px';
+                messageDiv.style.maxWidth = '80%';
+                messageDiv.style.marginLeft = sender === 'user' ? 'auto' : '0';
+                messageDiv.textContent = text;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Event listeners
+            if (sendChatBtn) {
+                sendChatBtn.addEventListener('click', sendMessage);
+            }
+            
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+
+            // Quick question buttons
+            document.querySelectorAll('.quick-question').forEach(button => {
+                button.addEventListener('click', function() {
+                    const question = this.getAttribute('data-question');
+                    chatInput.value = question;
+                    sendMessage();
+                });
+            });
+        } else {
+            console.log('Chatbot elements not found');
+        }
+    </script>
 
     <script>
         // ========== E-COMMERCE CORE FUNCTIONALITY ==========
@@ -337,6 +533,9 @@
             
             // Set initial active page
             showPage('home');
+            
+            // Setup category filters after products load
+            setupCategoryFilters();
         }
 
         // Page Navigation
@@ -381,12 +580,38 @@
                 } else {
                     // Fallback to demo products
                     allProducts = [
-                        { id: 1, name: 'Wireless Headphones', price: 3000, category: 'Electronics', image: 'https://via.placeholder.com/200', description: 'Premium wireless headphones with noise cancellation' },
-                        { id: 2, name: 'Smart Watch', price: 5500, category: 'Electronics', image: 'https://via.placeholder.com/200', description: 'Fitness tracker with heart rate monitor' },
-                        { id: 3, name: 'Running Shoes', price: 7500, category: 'Sports', image: 'https://via.placeholder.com/200', description: 'Professional running shoes with cushioning' },
-                        { id: 4, name: 'Coffee Maker', price: 28700, category: 'Home', image: 'https://via.placeholder.com/200', description: 'Automatic coffee maker with grinder' },
-                        { id: 5, name: 'Laptop Backpack', price: 4500, category: 'Accessories', image: 'https://via.placeholder.com/200', description: 'Waterproof laptop backpack' },
-                        { id: 6, name: 'Fitness Band', price: 2800, category: 'Electronics', image: 'https://via.placeholder.com/200', description: 'Waterproof fitness activity tracker' }
+                        { 
+                            id: 1, 
+                            name: 'Wireless Headphones', 
+                            price: 30000, 
+                            category: 'Electronics', 
+                            image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop',
+                            description: 'Premium wireless headphones with noise cancellation' 
+                        },
+                        { 
+                            id: 2, 
+                            name: 'Smart Watch', 
+                            price: 45000, 
+                            category: 'Electronics', 
+                            image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop',
+                            description: 'Fitness tracker with heart rate monitor' 
+                        },
+                        { 
+                            id: 3, 
+                            name: 'Running Shoes', 
+                            price: 13500, 
+                            category: 'Sports', 
+                            image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop',
+                            description: 'Professional running shoes with cushioning' 
+                        },
+                        { 
+                            id: 4, 
+                            name: 'Coffee Maker', 
+                            price: 22500, 
+                            category: 'Home', 
+                            image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop',
+                            description: 'Automatic coffee maker with grinder' 
+                        }
                     ];
                 }
                 
@@ -397,15 +622,61 @@
                 console.error('Error loading products:', error);
                 // Use demo products if backend fails
                 allProducts = [
-                    { id: 1, name: 'Wireless Headphones', price: 3000, category: 'Electronics', image: 'https://via.placeholder.com/200' },
-                    { id: 2, name: 'Smart Watch', price: 5500, category: 'Electronics', image: 'https://via.placeholder.com/200' },
-                    { id: 3, name: 'Running Shoes', price: 7500, category: 'Sports', image: 'https://via.placeholder.com/200' },
-                    { id: 4, name: 'Coffee Maker', price: 28700, category: 'Home', image: 'https://via.placeholder.com/200' }
+                    { 
+                        id: 1, 
+                        name: 'Wireless Headphones', 
+                        price: 30000, 
+                        category: 'Electronics', 
+                        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop' 
+                    },
+                    { 
+                        id: 2, 
+                        name: 'Smart Watch', 
+                        price: 45000, 
+                        category: 'Electronics', 
+                        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop' 
+                    },
+                    { 
+                        id: 3, 
+                        name: 'Running Shoes', 
+                        price: 13500, 
+                        category: 'Sports', 
+                        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop' 
+                    },
+                    { 
+                        id: 4, 
+                        name: 'Coffee Maker', 
+                        price: 22500, 
+                        category: 'Home', 
+                        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&auto=format&fit=crop' 
+                    }
                 ];
                 renderAllProducts();
                 renderFeaturedProducts();
                 updateProductCount();
             }
+        }
+
+        // ========== PRODUCT RENDERING FUNCTION ==========
+        function renderProductCard(product) {
+            const defaultImage = 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&auto=format&fit=crop';
+            
+            return `
+                <img src="${product.image || product.image_url || defaultImage}" 
+                     alt="${product.name}" 
+                     style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;">
+                <h3>${product.name}</h3>
+                <p class="price">ksh. ${product.price.toLocaleString()}</p>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">${product.category || 'General'}</p>
+                <div>
+                    <button class="btn" onclick="addToCart(${product.id})">
+                        Add to Cart
+                    </button>
+                    <button class="btn-secondary" onclick="viewProductDetails(${product.id})">
+                        Details
+                    </button>
+                </div>
+            `;
         }
 
         function renderAllProducts() {
@@ -414,20 +685,7 @@
             
             container.innerHTML = allProducts.map(product => `
                 <div class="product-card" data-category="${product.category}">
-                    <img src="${product.image || 'https://via.placeholder.com/200'}" 
-                         alt="${product.name}" 
-                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;">
-                    <h3>${product.name}</h3>
-                    <p class="price">ksh. ${product.price.toLocaleString()}</p>
-                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">${product.category}</p>
-                    <div>
-                        <button class="btn" onclick="addToCart(${product.id})">
-                            Add to Cart
-                        </button>
-                        <button class="btn-secondary" onclick="viewProductDetails(${product.id})">
-                            Details
-                        </button>
-                    </div>
+                    ${renderProductCard(product)}
                 </div>
             `).join('');
         }
@@ -439,12 +697,7 @@
             const featured = allProducts.slice(0, 3);
             container.innerHTML = featured.map(product => `
                 <div class="product-card">
-                    <h3>${product.name}</h3>
-                    <p class="price">ksh. ${product.price.toLocaleString()}</p>
-                    <p>${product.category}</p>
-                    <button class="btn" onclick="addToCart(${product.id})">
-                        Add to Cart
-                    </button>
+                    ${renderProductCard(product)}
                 </div>
             `).join('');
             
@@ -686,15 +939,43 @@
             alert(`${product.name}\n\nPrice: ksh. ${product.price.toLocaleString()}\nCategory: ${product.category}\n\n${product.description || 'No description available'}`);
         }
 
-        function setupEventListeners() {
-            // Category filtering
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
+        // Category Filter Functions
+        function setupCategoryFilters() {
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
                     const category = this.getAttribute('data-category');
+                    
+                    // Remove active class from all buttons
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    // Show/hide products based on category
                     filterProductsByCategory(category);
                 });
             });
+        }
+
+        function filterProductsByCategory(category) {
+            const productCards = document.querySelectorAll('.product-card');
             
+            let visibleCount = 0;
+            productCards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Update product count
+            document.getElementById('product-count').textContent = visibleCount;
+        }
+
+        function setupEventListeners() {
             // Price filtering
             const priceSlider = document.getElementById('price-slider');
             const priceMax = document.getElementById('price-max');
@@ -734,21 +1015,8 @@
             setupCheckout();
         }
 
-        function filterProductsByCategory(category) {
-            const productCards = document.querySelectorAll('.product-card');
-            
-            productCards.forEach(card => {
-                if (category === 'all' || card.getAttribute('data-category') === category) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
         function filterProductsByPrice(maxPrice) {
             // This would filter products based on price
-            // For now, we'll just show all products
             console.log('Filtering by max price:', maxPrice);
         }
 
@@ -766,38 +1034,14 @@
             }
             
             renderAllProducts();
+            renderFeaturedProducts();
         }
 
-        // ========== KEEP YOUR EXISTING CHATBOT CODE ==========
-        // Your existing chatbot functionality remains unchanged
-        const BACKEND_URL = "https://ecommerce-backend-jnb5.onrender.com";
-        
-        // ... (Keep all your existing chatbot code exactly as is)
-        // Only the e-commerce functionality has been added above
-        
         // Initialize the app when page loads
         window.addEventListener('DOMContentLoaded', function() {
             initApp();
-            
-            // Your existing initialization code
-            console.log('Page loaded, testing backend...');
-            // Keep your existing backend test and product loading
+            console.log('Page loaded, initializing app...');
         });
-
-        // Add CSS animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-            .status-processing { background: #fff3cd; color: #856404; }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
