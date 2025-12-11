@@ -68,7 +68,7 @@ const ProductDetail = () => {
         <div>
           <h1>{product.name}</h1>
           <p style={{ fontSize: '1.5rem', color: '#007bff', margin: '20px 0' }}>
-            ${product.price}
+            ksh{product.price}
           </p>
           <p>{product.description}</p>
           

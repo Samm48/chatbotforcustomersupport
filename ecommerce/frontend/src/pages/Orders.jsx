@@ -41,7 +41,7 @@ const Orders = () => {
                   <p>Status: <strong>{order.status}</strong></p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p>Total: <strong>${order.total_amount}</strong></p>
+                  <p>Total: <strong>ksh{order.total_amount}</strong></p>
                 </div>
               </div>
               

@@ -1,104 +1,403 @@
+// backend/server.js - COMPLETE VERSION
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
-app.use(cors());
+
+// Configure CORS for your frontend
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:5500', 'https://samm48.github.io'],
+  credentials: true
+}));
 app.use(express.json());
 
-// Create database pool for Render
+// Database connection for Render
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost/ecommerce',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Test database connection
+// Test database
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('Database error:', err.message);
+    console.log('⚠️ Database warning:', err.message);
   } else {
-    console.log('✅ Connected to PostgreSQL');
+    console.log('✅ Database connected');
     release();
+    
+    // Setup tables if needed
+    setupDatabase();
   }
 });
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'E-commerce API Running',
-    status: 'OK',
-    endpoints: ['/api/health', '/api/products', '/api/auth/login']
-  });
-});
+async function setupDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        category VARCHAR(100),
+        image_url VARCHAR(500),
+        stock_quantity INTEGER DEFAULT 10,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    // Insert sample products in KSH
+    const hasProducts = await pool.query('SELECT COUNT(*) FROM products');
+    if (parseInt(hasProducts.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO products (name, description, price, category, image_url, stock_quantity) VALUES
+        ('Wireless Headphones', 'Premium noise-canceling headphones', 30000, 'Electronics', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', 50),
+        ('Smart Watch', 'Advanced fitness tracking smartwatch', 45000, 'Electronics', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', 30),
+        ('Running Shoes', 'Comfortable athletic running shoes', 13500, 'Sports', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', 100),
+        ('Coffee Maker', 'Automatic coffee machine', 22500, 'Home', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', 25)
+      `);
+      console.log('✅ Sample products inserted');
+    }
+  } catch (error) {
+    console.log('⚠️ Database setup warning:', error.message);
+  }
+}
+
+// ========== API ENDPOINTS ==========
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date() });
+  res.json({ status: 'OK', timestamp: new Date(), currency: 'KSH' });
 });
 
-// Products endpoint
-// Products endpoint - FIXED to return ALL products
+// Get all products
 app.get('/api/products', async (req, res) => {
   try {
-    console.log('📦 Fetching ALL products from database...');
-    
-    // Try to get products from database
     const result = await pool.query('SELECT * FROM products ORDER BY id');
     
     if (result.rows.length === 0) {
-      console.log('⚠️ No products in database, inserting sample data...');
-      
-      // Insert sample products if database is empty
-      await pool.query(`
-        INSERT INTO products (name, description, price, category, image_url, stock_quantity) VALUES
-        ('Wireless Headphones', 'Premium noise-canceling headphones', 199.99, 'Electronics', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', 50),
-        ('Smart Watch', 'Advanced fitness tracking smartwatch', 299.99, 'Electronics', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', 30),
-        ('Running Shoes', 'Comfortable athletic running shoes', 89.99, 'Sports', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', 100),
-        ('Coffee Maker', 'Automatic coffee machine', 149.99, 'Home', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', 25),
-        ('Laptop Backpack', 'Durable backpack for laptops', 79.99, 'Accessories', 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400', 75),
-        ('Smartphone', 'Latest smartphone with high-res camera', 699.99, 'Electronics', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400', 40),
-        ('Yoga Mat', 'Premium non-slip yoga mat', 49.99, 'Sports', 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400', 80),
-        ('Desk Lamp', 'Modern LED desk lamp', 39.99, 'Home', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', 60)
-      `);
-      
-      // Fetch again after inserting
-      const newResult = await pool.query('SELECT * FROM products ORDER BY id');
-      console.log(`✅ Inserted ${newResult.rows.length} sample products`);
-      res.json({ products: newResult.rows });
+      // Fallback to demo products in KSH
+      res.json({
+        products: [
+          { id: 1, name: 'Wireless Headphones', price: 30000, category: 'Electronics', image_url: 'https://via.placeholder.com/200' },
+          { id: 2, name: 'Smart Watch', price: 45000, category: 'Electronics', image_url: 'https://via.placeholder.com/200' },
+          { id: 3, name: 'Running Shoes', price: 13500, category: 'Sports', image_url: 'https://via.placeholder.com/200' },
+          { id: 4, name: 'Coffee Maker', price: 22500, category: 'Home', image_url: 'https://via.placeholder.com/200' }
+        ]
+      });
     } else {
-      console.log(`✅ Returning ${result.rows.length} products from database`);
       res.json({ products: result.rows });
     }
-    
   } catch (error) {
-    console.error('❌ Database error:', error.message);
-    
-    // Fallback products if database fails
+    console.error('Database error:', error);
     res.json({
       products: [
-        { id: 1, name: 'Wireless Headphones', price: 199.99, category: 'Electronics', description: 'Premium headphones' },
-        { id: 2, name: 'Smart Watch', price: 299.99, category: 'Electronics', description: 'Advanced smartwatch' },
-        { id: 3, name: 'Running Shoes', price: 89.99, category: 'Sports', description: 'Athletic shoes' },
-        { id: 4, name: 'Coffee Maker', price: 149.99, category: 'Home', description: 'Coffee machine' },
-        { id: 5, name: 'Laptop Backpack', price: 79.99, category: 'Accessories', description: 'Durable backpack' },
-        { id: 6, name: 'Smartphone', price: 699.99, category: 'Electronics', description: 'Latest smartphone' },
-        { id: 7, name: 'Yoga Mat', price: 49.99, category: 'Sports', description: 'Premium yoga mat' },
-        { id: 8, name: 'Desk Lamp', price: 39.99, category: 'Home', description: 'LED desk lamp' }
+        { id: 1, name: 'Wireless Headphones', price: 30000, category: 'Electronics' },
+        { id: 2, name: 'Smart Watch', price: 45000, category: 'Electronics' },
+        { id: 3, name: 'Running Shoes', price: 13500, category: 'Sports' },
+        { id: 4, name: 'Coffee Maker', price: 22500, category: 'Home' }
       ]
     });
   }
 });
 
-// Login endpoint
+// Get single product
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
+    
+    if (result.rows.length === 0) {
+      res.json({
+        product: {
+          id: req.params.id,
+          name: 'Product Not Found',
+          price: 0,
+          category: 'General',
+          description: 'Product not available',
+          stock_quantity: 0
+        }
+      });
+    } else {
+      res.json({ product: result.rows[0] });
+    }
+  } catch (error) {
+    res.json({
+      product: {
+        id: req.params.id,
+        name: 'Demo Product',
+        price: 10000,
+        category: 'General',
+        description: 'Demo product description',
+        stock_quantity: 10
+      }
+    });
+  }
+});
+
+// ========== CART ENDPOINTS ==========
+// ========== CART ENDPOINTS ==========
+app.get('/api/cart', (req, res) => {
+  res.json({ 
+    cartItems: [],
+    message: 'Cart endpoint (demo mode)',
+    currency: 'KSH'
+  });
+});
+
+app.post('/api/cart/add', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Item added to cart (demo)'
+  });
+});
+
+// ========== ORDERS ENDPOINTS ==========
+app.get('/api/orders/my-orders', (req, res) => {
+  res.json({ 
+    orders: [
+      {
+        id: 1001,
+        created_at: new Date(),
+        status: 'delivered',
+        total_amount: 35000,  // KSH amount
+        items: [
+          { name: 'Wireless Headphones', quantity: 1, price: 30000 },
+          { name: 'Phone Case', quantity: 2, price: 2500 }
+        ]
+      }
+    ]
+  });
+});
+
+app.post('/api/orders', (req, res) => {
+  res.json({ 
+    success: true, 
+    orderId: Math.floor(1000 + Math.random() * 9000),
+    message: 'Order placed successfully (demo)'
+  });
+});
+
+// ========== LOGIN ENDPOINT ==========
 app.post('/api/auth/login', (req, res) => {
   res.json({
     success: true,
-    token: 'demo-token',
-    user: { id: 1, email: 'demo@example.com', firstName: 'Demo' }
+    token: 'demo-jwt-token',
+    user: {
+      id: 1,
+      email: req.body.email || 'demo@example.com',
+      firstName: 'Demo',
+      lastName: 'User'
+    }
+  });
+});
+let demoCart = []; // For demo purposes
+
+app.get('/api/cart', (req, res) => {
+  res.json({ cartItems: demoCart });
+});
+
+app.post('/api/cart/add', (req, res) => {
+  const { productId, quantity } = req.body;
+  
+  // Find product
+  pool.query('SELECT * FROM products WHERE id = $1', [productId])
+    .then(result => {
+      if (result.rows.length > 0) {
+        const product = result.rows[0];
+        const existingItem = demoCart.find(item => item.id == productId);
+        
+        if (existingItem) {
+          existingItem.quantity += quantity || 1;
+        } else {
+          demoCart.push({
+            id: product.id,
+            product_id: product.id,
+            name: product.name,
+            price: product.price,
+            image_url: product.image_url,
+            quantity: quantity || 1
+          });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: 'Added to cart',
+          cartCount: demoCart.length 
+        });
+      } else {
+        res.status(404).json({ error: 'Product not found' });
+      }
+    })
+    .catch(error => {
+      res.json({ success: true, message: 'Added to cart (demo mode)' });
+    });
+});
+
+app.put('/api/cart/:id', (req, res) => {
+  const itemId = req.params.id;
+  const { quantity } = req.body;
+  
+  const item = demoCart.find(item => item.id == itemId);
+  if (item) {
+    item.quantity = quantity;
+    res.json({ success: true, message: 'Cart updated' });
+  } else {
+    res.status(404).json({ error: 'Item not found in cart' });
+  }
+});
+
+app.delete('/api/cart/:id', (req, res) => {
+  const itemId = req.params.id;
+  demoCart = demoCart.filter(item => item.id != itemId);
+  res.json({ success: true, message: 'Item removed' });
+});
+
+// ========== ORDER ENDPOINTS ==========
+
+let demoOrders = [];
+
+app.get('/api/orders/my-orders', (req, res) => {
+  res.json({ orders: demoOrders });
+});
+
+app.post('/api/orders', (req, res) => {
+  const order = {
+    id: Date.now(),
+    created_at: new Date(),
+    status: 'processing',
+    total_amount: demoCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+    items: [...demoCart]
+  };
+  
+  demoOrders.push(order);
+  demoCart = []; // Clear cart
+  
+  res.json({ 
+    success: true, 
+    orderId: order.id,
+    message: 'Order placed successfully' 
+  });
+});
+
+// ========== USER ENDPOINTS ==========
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  res.json({
+    success: true,
+    token: 'demo-jwt-token',
+    user: {
+      id: 1,
+      email: email || 'demo@example.com',
+      firstName: 'Demo',
+      lastName: 'User'
+    }
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'E-commerce Backend API',
+    version: '1.0',
+    endpoints: [
+      '/api/health',
+      '/api/products',
+      '/api/products/:id',
+      '/api/cart',
+      '/api/orders/my-orders',
+      '/api/auth/login'
+    ],
+    currency: 'KSH (Kenyan Shillings)'
   });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`💰 All prices in KSH (Kenyan Shillings)`);
 });
+// Add this function to your server.js
+async function setupDatabase() {
+  const client = await pool.connect();
+  
+  try {
+    console.log('🔄 Setting up database tables...');
+    
+    // Create tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        category VARCHAR(100),
+        image_url VARCHAR(500),
+        stock_quantity INTEGER DEFAULT 10,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS cart_items (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        product_id INTEGER REFERENCES products(id),
+        quantity INTEGER DEFAULT 1,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, product_id)
+      );
+    `);
+    
+    // Check if products exist
+    const productCount = await client.query('SELECT COUNT(*) FROM products');
+    
+    if (parseInt(productCount.rows[0].count) === 0) {
+      console.log('📦 Inserting KSH products...');
+      
+      await client.query(`
+        INSERT INTO products (name, description, price, category, image_url, stock_quantity) VALUES
+        ('Wireless Headphones', 'Premium noise-canceling headphones', 30000, 'Electronics', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', 50),
+        ('Smart Watch', 'Advanced fitness tracking smartwatch', 45000, 'Electronics', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400', 30),
+        ('Running Shoes', 'Comfortable athletic running shoes', 13500, 'Sports', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', 100),
+        ('Coffee Maker', 'Automatic coffee machine', 22500, 'Home', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400', 25)
+      `);
+      
+      console.log('✅ KSH products inserted!');
+    } else {
+      // Update existing products to KSH
+      console.log('🔄 Updating prices to KSH...');
+      await client.query(`
+        UPDATE products SET price = 
+        CASE 
+          WHEN name = 'Wireless Headphones' THEN 30000
+          WHEN name = 'Smart Watch' THEN 45000
+          WHEN name = 'Running Shoes' THEN 13500
+          WHEN name = 'Coffee Maker' THEN 22500
+          WHEN name = 'Laptop Backpack' THEN 12000
+          WHEN name = 'Smartphone' THEN 105000
+          WHEN name = 'Yoga Mat' THEN 7500
+          WHEN name = 'Desk Lamp' THEN 6000
+          ELSE price * 150  -- Convert USD to KSH for others
+        END
+      `);
+    }
+    
+    console.log('✅ Database setup complete!');
+  } catch (error) {
+    console.error('❌ Database setup error:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+// Call this after connecting to database
+setupDatabase();
