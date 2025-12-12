@@ -774,7 +774,7 @@
             <section id="human-support" class="support-section" style="display: none;">
                 <div class="support-container">
                     <h3>🧑‍💻 Connect with a Human Agent</h3>
-                    <p>Our AI couldn't resolve your issue? Our Kenyan support team is here to help you directly.</p>
+                    <p>Our AI couldn't resolve your issue? Our support team is here to help you directly.</p>
                     
                     <div class="support-options">
                         <!-- Option 1: Live Chat -->
@@ -787,7 +787,7 @@
                         
                         <!-- Option 2: Phone Support -->
                         <div class="support-option">
-                            <h4>📞 Call Kenyan Support</h4>
+                            <h4>📞 Call  Support</h4>
                             <p>Speak directly with our team.</p>
                             <div class="phone-number">
                                 <strong>+254 700 123 456</strong>
@@ -1073,7 +1073,7 @@
                 showHumanSupport();
             }
             
-            return "I understand you'd like to speak with a human agent. You can connect with our Kenyan support team using the options below. Is there anything I can help with in the meantime?";
+            return "I understand you'd like to speak with a human agent. You can connect with our support team using the options below. Is there anything I can help with in the meantime?";
         }
 
         // Product inquiry handling
@@ -1266,6 +1266,9 @@
             }
         ];
 
+        // Store all orders across the system
+        let allOrders = JSON.parse(localStorage.getItem('shopSmartOrders')) || [];
+
         // Shopping Cart System
         let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
         let allProducts = [];
@@ -1286,8 +1289,8 @@
 
         // Initialize the application
         function initApp() {
+            loadInitialData(); // Load all data first
             checkLoginStatus();
-            loadProducts();
             updateCartDisplay();
             setupEventListeners();
             initializeSocket();
@@ -1295,6 +1298,24 @@
             
             // Start on auth page
             showPage('auth');
+        }
+
+        // Load all initial data
+        function loadInitialData() {
+            // Load users from localStorage
+            const savedUsers = localStorage.getItem('shopSmartUsers');
+            if (savedUsers) {
+                allUsers = JSON.parse(savedUsers);
+            }
+            
+            // Load orders from localStorage
+            const savedOrders = localStorage.getItem('shopSmartOrders');
+            if (savedOrders) {
+                allOrders = JSON.parse(savedOrders);
+            }
+            
+            // Load products
+            loadProducts();
         }
 
         // Human Support Functions
@@ -1526,12 +1547,6 @@
                     updateUserUI();
                     showPage('home');
                 }
-            }
-            
-            // Load users from localStorage
-            const savedUsers = localStorage.getItem('shopSmartUsers');
-            if (savedUsers) {
-                allUsers = JSON.parse(savedUsers);
             }
         }
 
@@ -1930,6 +1945,8 @@
             // Load products for admin table
             adminProducts = [...allProducts];
             renderAdminProductsTable();
+            loadAdminUsers();
+            loadAdminOrders();
             updateAdminStats();
         }
 
@@ -1942,7 +1959,11 @@
                 return;
             }
             
-            tableBody.innerHTML = allUsers.map(user => `
+            tableBody.innerHTML = allUsers.map(user => {
+                // Count user's orders
+                const userOrders = allOrders.filter(order => order.userId === user.id);
+                
+                return `
                 <tr>
                     <td>${user.id}</td>
                     <td><strong>${user.name}</strong></td>
@@ -1950,7 +1971,7 @@
                     <td>${user.phone || 'N/A'}</td>
                     <td><span class="user-role ${user.isAdmin ? 'role-admin' : 'role-customer'}">${user.isAdmin ? 'Admin' : 'Customer'}</span></td>
                     <td>${formatDate(user.joinedDate)}</td>
-                    <td>${user.orders ? user.orders.length : 0}</td>
+                    <td>${userOrders.length}</td>
                     <td>
                         <button class="btn-secondary" onclick="editUser(${user.id})" style="padding: 5px 10px; font-size: 0.9rem;">Edit</button>
                         ${user.id !== 999 && user.id !== currentUser.id ? 
@@ -1959,10 +1980,45 @@
                         }
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
             
             // Update admin stats
             document.getElementById('admin-total-users').textContent = allUsers.length;
+        }
+
+        function loadAdminOrders() {
+            const tableBody = document.getElementById('admin-orders-table');
+            if (!tableBody) return;
+            
+            if (allOrders.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No orders found</td></tr>`;
+                return;
+            }
+            
+            tableBody.innerHTML = allOrders.map(order => {
+                // Find user for this order
+                const user = allUsers.find(u => u.id === order.userId);
+                const userName = user ? user.name : 'Unknown User';
+                
+                return `
+                <tr>
+                    <td>#${order.id}</td>
+                    <td>${userName}</td>
+                    <td>${order.date}</td>
+                    <td>ksh. ${order.total.toLocaleString()}</td>
+                    <td><span class="order-status status-${order.status}">${order.status}</span></td>
+                    <td>
+                        <button class="btn-secondary" onclick="updateOrderStatus(${order.id})" style="padding: 5px 10px; font-size: 0.9rem;">Update Status</button>
+                    </td>
+                </tr>
+            `}).join('');
+            
+            // Update admin stats
+            document.getElementById('admin-total-orders').textContent = allOrders.length;
+            
+            // Calculate total revenue
+            const totalRevenue = allOrders.reduce((sum, order) => sum + order.total, 0);
+            document.getElementById('admin-total-revenue').textContent = totalRevenue.toLocaleString();
         }
 
         function renderAdminProductsTable() {
@@ -2000,10 +2056,10 @@
             const totalRevenueElem = document.getElementById('admin-total-revenue');
             
             if (totalProductsElem) totalProductsElem.textContent = adminProducts.length;
-            if (totalOrdersElem) totalOrdersElem.textContent = currentUser.orders.length;
+            if (totalOrdersElem) totalOrdersElem.textContent = allOrders.length;
             
             if (totalRevenueElem) {
-                const totalRevenue = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
+                const totalRevenue = allOrders.reduce((sum, order) => sum + order.total, 0);
                 totalRevenueElem.textContent = totalRevenue.toLocaleString();
             }
         }
@@ -2180,6 +2236,20 @@
             
             // Close modal
             document.getElementById('product-modal').classList.remove('active');
+        }
+
+        // Order Management Functions
+        function updateOrderStatus(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            const newStatus = prompt('Enter new status (pending, processing, shipped, delivered, cancelled):', order.status);
+            if (newStatus && ['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(newStatus)) {
+                order.status = newStatus;
+                localStorage.setItem('shopSmartOrders', JSON.stringify(allOrders));
+                loadAdminOrders();
+                showNotification(`Order #${orderId} status updated to ${newStatus}`);
+            }
         }
 
         // Shopping Cart Functions
@@ -2492,11 +2562,19 @@
                 total: shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
                 status: 'processing',
                 userId: currentUser.id,
+                customerName: name,
+                customerEmail: email,
+                customerPhone: phone,
                 shippingAddress: address,
                 paymentMethod: paymentMethod
             };
             
+            // Add order to allOrders array
+            allOrders.push(order);
+            localStorage.setItem('shopSmartOrders', JSON.stringify(allOrders));
+            
             // Add order to current user
+            if (!currentUser.orders) currentUser.orders = [];
             currentUser.orders.push(order);
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
@@ -2528,13 +2606,19 @@
             // Update dashboard
             updateDashboard();
             
+            // Update admin data if admin is viewing
+            if (currentUser.isAdmin) {
+                loadAdminOrders();
+                updateAdminStats();
+            }
+            
             // Show dashboard
             showPage('dashboard');
         }
 
         function updateDashboard() {
-            const totalOrders = currentUser.orders.length;
-            const totalSpent = currentUser.orders.reduce((sum, order) => sum + order.total, 0);
+            const totalOrders = currentUser.orders ? currentUser.orders.length : 0;
+            const totalSpent = currentUser.orders ? currentUser.orders.reduce((sum, order) => sum + order.total, 0) : 0;
             
             document.getElementById('total-orders').textContent = totalOrders;
             document.getElementById('total-spent').textContent = totalSpent.toLocaleString();
@@ -2548,7 +2632,7 @@
             const container = document.getElementById('order-history');
             if (!container) return;
             
-            if (currentUser.orders.length === 0) {
+            if (!currentUser.orders || currentUser.orders.length === 0) {
                 container.innerHTML = '<p>No orders yet</p>';
                 return;
             }
@@ -2577,6 +2661,7 @@
         window.deleteProduct = deleteProduct;
         window.editUser = editUser;
         window.deleteUser = deleteUser;
+        window.updateOrderStatus = updateOrderStatus;
 
         // Initialize the app
         window.addEventListener('DOMContentLoaded', function() {
