@@ -256,6 +256,56 @@
             text-align: center;
         }
         
+        /* Reports Section */
+        .reports-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .report-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .report-filter {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .report-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .report-chart {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
         /* Animations */
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
@@ -283,6 +333,7 @@
                 </a>
                 <a href="#" class="nav-link" data-page="dashboard">Dashboard</a>
                 <a href="#" class="nav-link" data-page="admin" id="admin-link" style="display: none;">Admin</a>
+                <a href="#" class="nav-link" data-page="reports" id="reports-link" style="display: none;">Reports</a>
                 <div class="user-menu">
                     <span id="user-greeting">Guest</span>
                     <button id="logout-btn" style="display: none; margin-left: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Logout</button>
@@ -353,8 +404,6 @@
                         </div>
                         <div class="auth-error" id="login-error"></div>
                         <div class="auth-success" id="login-success"></div>
-                        
-                       
                     </div>
                     
                     <!-- Register Form -->
@@ -632,6 +681,93 @@
                 </div>
             </div>
 
+            <!-- Reports Page -->
+            <div id="reports-page" class="page">
+                <div class="reports-header">
+                    <h1>📊 Sales & Activity Reports</h1>
+                    <div>
+                        <button class="btn" id="generate-report-btn">📈 Generate Report</button>
+                        <button class="btn-info" id="export-report-btn">📥 Export as CSV</button>
+                    </div>
+                </div>
+                
+                <!-- Report Filters -->
+                <div class="report-filters">
+                    <select id="report-type" class="report-filter">
+                        <option value="sales">Sales Report</option>
+                        <option value="products">Products Report</option>
+                        <option value="users">Users Report</option>
+                        <option value="inventory">Inventory Report</option>
+                    </select>
+                    
+                    <select id="time-period" class="report-filter">
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month" selected>This Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                    
+                    <input type="date" id="start-date" class="report-filter" placeholder="Start Date">
+                    <input type="date" id="end-date" class="report-filter" placeholder="End Date">
+                    
+                    <button class="btn" id="apply-filters-btn">Apply Filters</button>
+                </div>
+                
+                <!-- Report Summary Cards -->
+                <div class="dashboard-cards">
+                    <div class="dashboard-card">
+                        <h3>Total Sales</h3>
+                        <div class="value">ksh. <span id="report-total-sales">0</span></div>
+                        <small id="sales-period">This Month</small>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Orders</h3>
+                        <div class="value" id="report-total-orders">0</div>
+                        <small id="orders-period">This Month</small>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Avg. Order Value</h3>
+                        <div class="value">ksh. <span id="report-avg-order">0</span></div>
+                        <small id="avg-period">This Month</small>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Top Category</h3>
+                        <div class="value" id="report-top-category">-</div>
+                        <small id="category-period">This Month</small>
+                    </div>
+                </div>
+                
+                <!-- Report Details -->
+                <div class="reports-section">
+                    <h3>📋 Detailed Report</h3>
+                    <div id="report-details">
+                        <p class="text-center" style="padding: 40px; color: #666;">
+                            Click "Generate Report" to view detailed analytics
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Sales Chart -->
+                <div class="reports-section">
+                    <h3>📈 Sales Trend</h3>
+                    <div class="report-chart" id="sales-chart">
+                        <p>Sales chart will appear here after generating report</p>
+                    </div>
+                </div>
+                
+                <!-- Top Products -->
+                <div class="reports-section">
+                    <h3>🏆 Top Selling Products</h3>
+                    <div id="top-products-list">
+                        <p class="text-center" style="padding: 20px; color: #666;">
+                            Top products will appear here
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Checkout Modal -->
             <div id="checkout-modal" class="modal">
                 <div class="modal-content">
@@ -869,6 +1005,7 @@
         let chatInput = null;
         let sendChatBtn = null;
         let closeChatBtn = null;
+        let isProcessingResponse = false; // Add this flag to prevent duplicate responses
 
         function initializeChatbot() {
             chatbotModal = document.getElementById('chatbot-modal');
@@ -904,6 +1041,8 @@
 
             // Send message function
             function sendMessage() {
+                if (isProcessingResponse) return; // Prevent sending multiple messages while processing
+                
                 const message = chatInput.value.trim();
                 if (!message) return;
                 
@@ -911,10 +1050,16 @@
                 addMessage(message, 'user');
                 chatInput.value = '';
                 
+                // Set processing flag
+                isProcessingResponse = true;
+                
                 // Generate AI response
                 setTimeout(() => {
                     const aiResponse = generateAIResponse(message);
                     addMessage(aiResponse, 'bot');
+                    
+                    // Reset processing flag
+                    isProcessingResponse = false;
                     
                     // Also send via socket if connected
                     if (socket && socket.connected) {
@@ -938,6 +1083,7 @@
                 messageDiv.style.marginBottom = '10px';
                 messageDiv.style.maxWidth = '80%';
                 messageDiv.style.marginLeft = sender === 'user' ? 'auto' : '0';
+                messageDiv.style.wordWrap = 'break-word';
                 messageDiv.textContent = text;
                 
                 chatMessages.appendChild(messageDiv);
@@ -951,7 +1097,7 @@
             
             if (chatInput) {
                 chatInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') sendMessage();
+                    if (e.key === 'Enter' && !isProcessingResponse) sendMessage();
                 });
             }
 
@@ -992,6 +1138,11 @@
             // Check if user wants human support
             if (wantsHumanSupport(msg)) {
                 userContext.conversationState = 'human_requested';
+                setTimeout(() => {
+                    if (typeof showHumanSupport === 'function') {
+                        showHumanSupport();
+                    }
+                }, 100);
                 return getHumanSupportResponse();
             }
             
@@ -1068,17 +1219,12 @@
         }
 
         function getHumanSupportResponse() {
-            // Show human support section
-            if (typeof showHumanSupport === 'function') {
-                showHumanSupport();
-            }
-            
-            return "I understand you'd like to speak with a human agent. You can connect with our support team using the options below. Is there anything I can help with in the meantime?";
+            return "I understand you'd like to speak with a human agent. I've opened the human support section for you. You can connect with our support team using the options provided. Is there anything I can help with in the meantime?";
         }
 
         // Product inquiry handling
         function isProductInquiry(message, context) {
-            const productTerms = ['product', 'item', 'buy', 'purchase', 'looking for', 'searching for'];
+            const productTerms = ['product', 'item', 'buy', 'purchase', 'looking for', 'searching for', 'want to buy'];
             return productTerms.some(term => message.includes(term)) || 
                    context.conversationState === 'product_discussion';
         }
@@ -1107,7 +1253,8 @@
         function extractProductKeywords(message) {
             const productTerms = [
                 'headphone', 'watch', 'shoe', 'phone', 'laptop', 'camera', 'tablet',
-                'electronics', 'clothing', 'home', 'kitchen', 'sports', 'accessories'
+                'electronics', 'clothing', 'home', 'kitchen', 'sports', 'accessories',
+                'wireless', 'smart', 'running', 'coffee', 'maker'
             ];
             
             return productTerms.filter(term => message.includes(term));
@@ -1138,7 +1285,7 @@
 
         // Order inquiry handling
         function isOrderInquiry(message) {
-            const orderTerms = ['order', 'track', 'status', 'delivery', 'when will', 'ship'];
+            const orderTerms = ['order', 'track', 'status', 'delivery', 'when will', 'ship', 'my order'];
             return orderTerms.some(term => message.includes(term));
         }
 
@@ -1168,7 +1315,7 @@
 
         // Shipping inquiries
         function isShippingInquiry(message) {
-            const shippingTerms = ['shipping', 'delivery', 'arrive', 'when get', 'ship time'];
+            const shippingTerms = ['shipping', 'delivery', 'arrive', 'when get', 'ship time', 'how long', 'deliver'];
             return shippingTerms.some(term => message.includes(term));
         }
 
@@ -1188,7 +1335,7 @@
 
         // Account inquiries
         function isAccountInquiry(message) {
-            const accountTerms = ['account', 'login', 'password', 'email', 'profile'];
+            const accountTerms = ['account', 'login', 'password', 'email', 'profile', 'sign in', 'register'];
             return accountTerms.some(term => message.includes(term));
         }
 
@@ -1198,7 +1345,7 @@
 
         // Price inquiries
         function isPriceInquiry(message) {
-            const priceTerms = ['price', 'cost', 'expensive', 'cheap', 'discount', 'sale', 'offer'];
+            const priceTerms = ['price', 'cost', 'expensive', 'cheap', 'discount', 'sale', 'offer', 'how much'];
             return priceTerms.some(term => message.includes(term));
         }
 
@@ -1269,7 +1416,7 @@
         // Store all orders across the system
         let allOrders = JSON.parse(localStorage.getItem('shopSmartOrders')) || [];
 
-        // Shopping Cart System
+        // Shopping Cart System - FIXED VERSION
         let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
         let allProducts = [];
         let adminProducts = [];
@@ -1284,7 +1431,8 @@
             products: document.getElementById('products-page'),
             cart: document.getElementById('cart-page'),
             dashboard: document.getElementById('dashboard-page'),
-            admin: document.getElementById('admin-page')
+            admin: document.getElementById('admin-page'),
+            reports: document.getElementById('reports-page')
         };
 
         // Initialize the application
@@ -1569,6 +1717,8 @@
                 updateDashboard();
             } else if (pageId === 'admin') {
                 loadAdminData();
+            } else if (pageId === 'reports') {
+                loadReports();
             }
             
             // Hide/show sidebar based on page
@@ -1815,6 +1965,16 @@
                 }
             }
             
+            // Show/hide reports link
+            const reportsLink = document.getElementById('reports-link');
+            if (reportsLink) {
+                if (currentUser.isAdmin) {
+                    reportsLink.style.display = 'block';
+                } else {
+                    reportsLink.style.display = 'none';
+                }
+            }
+            
             // Update dashboard user info
             document.getElementById('user-name').textContent = currentUser.name;
             document.getElementById('user-email').textContent = currentUser.email;
@@ -1893,7 +2053,7 @@
             ];
         }
 
-        // ========== PRODUCT RENDERING FUNCTION ==========
+        // ========== FIXED PRODUCT RENDERING FUNCTION ==========
         function renderProductCard(product) {
             const defaultImage = 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&auto=format&fit=crop';
             
@@ -1938,6 +2098,138 @@
             `).join('');
             
             document.getElementById('total-products').textContent = allProducts.length;
+        }
+
+        // ========== FIXED ADD TO CART FUNCTION ==========
+        function addToCart(productId) {
+            if (!currentUser.isLoggedIn) {
+                showNotification('Please login to add items to cart');
+                showPage('auth');
+                return;
+            }
+            
+            // Find product by ID - ensure it exists in allProducts
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) {
+                console.error(`Product with ID ${productId} not found`);
+                showNotification('Product not found');
+                return;
+            }
+            
+            // Check if item already exists in cart
+            const existingItemIndex = shoppingCart.findIndex(item => item.id === productId);
+            
+            if (existingItemIndex !== -1) {
+                // Update quantity if item exists
+                shoppingCart[existingItemIndex].quantity += 1;
+            } else {
+                // Add new item to cart
+                shoppingCart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.image || product.image_url,
+                    category: product.category,
+                    quantity: 1
+                });
+            }
+            
+            saveCart();
+            updateCartDisplay();
+            showNotification(`Added ${product.name} to cart!`);
+            
+            // If on cart page, refresh the display
+            if (pages.cart.classList.contains('active')) {
+                renderCart();
+            }
+        }
+
+        // ========== FIXED CART FUNCTIONS ==========
+        function removeFromCart(productId) {
+            shoppingCart = shoppingCart.filter(item => item.id !== productId);
+            saveCart();
+            updateCartDisplay();
+            renderCart();
+        }
+
+        function updateQuantity(productId, change) {
+            const itemIndex = shoppingCart.findIndex(item => item.id === productId);
+            if (itemIndex !== -1) {
+                shoppingCart[itemIndex].quantity += change;
+                if (shoppingCart[itemIndex].quantity < 1) {
+                    removeFromCart(productId);
+                } else {
+                    saveCart();
+                    updateCartDisplay();
+                    renderCart();
+                }
+            }
+        }
+
+        function saveCart() {
+            localStorage.setItem('shoppingCart', JSON.stringify(shoppingCart));
+        }
+
+        function updateCartDisplay() {
+            const totalItems = shoppingCart.reduce((sum, item) => sum + item.quantity, 0);
+            const cartTotal = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            // Update all cart count displays
+            document.getElementById('cart-count').textContent = totalItems;
+            document.getElementById('sidebar-cart-count').textContent = totalItems;
+            document.getElementById('sidebar-cart-total').textContent = cartTotal.toLocaleString();
+            document.getElementById('home-cart-total').textContent = cartTotal.toLocaleString();
+            document.getElementById('dashboard-cart-count').textContent = totalItems;
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            if (!container) return;
+            
+            if (shoppingCart.length === 0) {
+                container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">Your cart is empty</div>';
+                updateCheckoutSummary(0);
+                return;
+            }
+            
+            container.innerHTML = shoppingCart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <h4>${item.name}</h4>
+                        <p>ksh. ${item.price.toLocaleString()} each</p>
+                    </div>
+                    <div class="cart-item-controls">
+                        <div class="quantity-control">
+                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
+                            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+                        </div>
+                        <div style="min-width: 100px; text-align: right;">
+                            ksh. ${(item.price * item.quantity).toLocaleString()}
+                        </div>
+                        <button class="btn-danger" onclick="removeFromCart(${item.id})">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            const subtotal = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            updateCheckoutSummary(subtotal);
+        }
+
+        function updateCheckoutSummary(subtotal) {
+            const shipping = subtotal > 10000 ? 0 : 500;
+            const tax = subtotal * 0.1;
+            const total = subtotal + shipping + tax;
+            
+            document.getElementById('subtotal').textContent = subtotal.toLocaleString();
+            document.getElementById('shipping').textContent = shipping.toLocaleString();
+            document.getElementById('tax').textContent = tax.toLocaleString();
+            document.getElementById('total').textContent = total.toLocaleString();
+            
+            // Also update checkout modal total
+            document.getElementById('checkout-total').textContent = total.toLocaleString();
         }
 
         // ========== ADMIN FUNCTIONS ==========
@@ -2252,114 +2544,209 @@
             }
         }
 
-        // Shopping Cart Functions
-        function addToCart(productId) {
-            if (!currentUser.isLoggedIn) {
-                showNotification('Please login to add items to cart');
-                showPage('auth');
-                return;
-            }
+        // ========== REPORTS SYSTEM ==========
+        function loadReports() {
+            generateSalesReport();
+        }
+
+        function generateSalesReport() {
+            const reportType = document.getElementById('report-type').value;
+            const timePeriod = document.getElementById('time-period').value;
             
-            const product = allProducts.find(p => p.id === productId);
-            if (!product) return;
+            let filteredOrders = [...allOrders];
+            let filteredProducts = [...allProducts];
             
-            const existingItem = shoppingCart.find(item => item.id === productId);
-            
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                shoppingCart.push({
-                    ...product,
-                    quantity: 1
+            // Filter by time period
+            if (timePeriod !== 'all') {
+                const now = new Date();
+                let startDate = new Date();
+                
+                switch(timePeriod) {
+                    case 'today':
+                        startDate.setHours(0, 0, 0, 0);
+                        break;
+                    case 'week':
+                        startDate.setDate(now.getDate() - 7);
+                        break;
+                    case 'month':
+                        startDate.setMonth(now.getMonth() - 1);
+                        break;
+                    case 'quarter':
+                        startDate.setMonth(now.getMonth() - 3);
+                        break;
+                    case 'year':
+                        startDate.setFullYear(now.getFullYear() - 1);
+                        break;
+                }
+                
+                filteredOrders = filteredOrders.filter(order => {
+                    const orderDate = new Date(order.date);
+                    return orderDate >= startDate;
                 });
             }
             
-            saveCart();
-            updateCartDisplay();
-            showNotification(`Added ${product.name} to cart!`);
+            // Generate report based on type
+            switch(reportType) {
+                case 'sales':
+                    generateSalesSummary(filteredOrders);
+                    break;
+                case 'products':
+                    generateProductsReport(filteredOrders, filteredProducts);
+                    break;
+                case 'users':
+                    generateUsersReport(filteredOrders);
+                    break;
+                case 'inventory':
+                    generateInventoryReport(filteredProducts);
+                    break;
+            }
         }
 
-        function removeFromCart(productId) {
-            shoppingCart = shoppingCart.filter(item => item.id !== productId);
-            saveCart();
-            updateCartDisplay();
-            renderCart();
-        }
-
-        function updateQuantity(productId, change) {
-            const item = shoppingCart.find(item => item.id === productId);
-            if (item) {
-                item.quantity += change;
-                if (item.quantity < 1) {
-                    removeFromCart(productId);
-                } else {
-                    saveCart();
-                    updateCartDisplay();
-                    renderCart();
+        function generateSalesSummary(orders) {
+            const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+            const totalOrders = orders.length;
+            const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+            
+            // Calculate sales by category
+            const categorySales = {};
+            orders.forEach(order => {
+                order.items.forEach(item => {
+                    const category = item.category || 'Unknown';
+                    if (!categorySales[category]) {
+                        categorySales[category] = 0;
+                    }
+                    categorySales[category] += item.price * item.quantity;
+                });
+            });
+            
+            // Find top category
+            let topCategory = '-';
+            let topCategorySales = 0;
+            for (const [category, sales] of Object.entries(categorySales)) {
+                if (sales > topCategorySales) {
+                    topCategory = category;
+                    topCategorySales = sales;
                 }
             }
-        }
-
-        function saveCart() {
-            localStorage.setItem('shoppingCart', JSON.stringify(shoppingCart));
-        }
-
-        function updateCartDisplay() {
-            const totalItems = shoppingCart.reduce((sum, item) => sum + item.quantity, 0);
-            const cartTotal = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             
-            document.getElementById('cart-count').textContent = totalItems;
-            document.getElementById('sidebar-cart-count').textContent = totalItems;
-            document.getElementById('sidebar-cart-total').textContent = cartTotal.toLocaleString();
-            document.getElementById('home-cart-total').textContent = cartTotal.toLocaleString();
-            document.getElementById('dashboard-cart-count').textContent = totalItems;
-        }
-
-        function renderCart() {
-            const container = document.getElementById('cart-items-container');
-            if (!container) return;
+            // Update summary cards
+            document.getElementById('report-total-sales').textContent = totalSales.toLocaleString();
+            document.getElementById('report-total-orders').textContent = totalOrders;
+            document.getElementById('report-avg-order').textContent = Math.round(avgOrderValue).toLocaleString();
+            document.getElementById('report-top-category').textContent = topCategory;
             
-            if (shoppingCart.length === 0) {
-                container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">Your cart is empty</div>';
-                updateCheckoutSummary(0);
-                return;
+            // Update period labels
+            const period = document.getElementById('time-period').options[document.getElementById('time-period').selectedIndex].text;
+            document.getElementById('sales-period').textContent = period;
+            document.getElementById('orders-period').textContent = period;
+            document.getElementById('avg-period').textContent = period;
+            document.getElementById('category-period').textContent = period;
+            
+            // Generate detailed report
+            let reportDetails = `<h4>Sales Summary</h4>`;
+            reportDetails += `<p>Total Revenue: <strong>ksh. ${totalSales.toLocaleString()}</strong></p>`;
+            reportDetails += `<p>Number of Orders: <strong>${totalOrders}</strong></p>`;
+            reportDetails += `<p>Average Order Value: <strong>ksh. ${Math.round(avgOrderValue).toLocaleString()}</strong></p>`;
+            
+            reportDetails += `<h4>Sales by Category</h4>`;
+            for (const [category, sales] of Object.entries(categorySales)) {
+                reportDetails += `<p>${category}: <strong>ksh. ${sales.toLocaleString()}</strong></p>`;
             }
             
-            container.innerHTML = shoppingCart.map(item => `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <h4>${item.name}</h4>
-                        <p>ksh. ${item.price.toLocaleString()} each</p>
-                    </div>
-                    <div class="cart-item-controls">
-                        <div class="quantity-control">
-                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
-                            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
-                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
-                        </div>
-                        <div style="min-width: 100px; text-align: right;">
-                            ksh. ${(item.price * item.quantity).toLocaleString()}
-                        </div>
-                        <button class="btn-danger" onclick="removeFromCart(${item.id})">
-                            Remove
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+            // Top products
+            const productSales = {};
+            orders.forEach(order => {
+                order.items.forEach(item => {
+                    if (!productSales[item.name]) {
+                        productSales[item.name] = { quantity: 0, revenue: 0 };
+                    }
+                    productSales[item.name].quantity += item.quantity;
+                    productSales[item.name].revenue += item.price * item.quantity;
+                });
+            });
             
-            const subtotal = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            updateCheckoutSummary(subtotal);
+            // Sort products by revenue
+            const sortedProducts = Object.entries(productSales)
+                .sort((a, b) => b[1].revenue - a[1].revenue)
+                .slice(0, 5);
+            
+            let topProductsHTML = '';
+            sortedProducts.forEach(([product, data], index) => {
+                topProductsHTML += `
+                    <div class="report-card">
+                        <h4>${index + 1}. ${product}</h4>
+                        <p>Units Sold: <strong>${data.quantity}</strong></p>
+                        <p>Revenue: <strong>ksh. ${data.revenue.toLocaleString()}</strong></p>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('report-details').innerHTML = reportDetails;
+            document.getElementById('top-products-list').innerHTML = topProductsHTML;
+            
+            // Simple chart representation
+            const chartElement = document.getElementById('sales-chart');
+            if (chartElement) {
+                let chartHTML = '<div style="width: 100%;">';
+                
+                // Create a simple bar chart
+                const maxSales = Math.max(...Object.values(categorySales));
+                for (const [category, sales] of Object.entries(categorySales)) {
+                    const barWidth = (sales / maxSales) * 100;
+                    chartHTML += `
+                        <div style="margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span>${category}</span>
+                                <span>ksh. ${sales.toLocaleString()}</span>
+                            </div>
+                            <div style="background: #007bff; height: 20px; width: ${barWidth}%; border-radius: 3px;"></div>
+                        </div>
+                    `;
+                }
+                
+                chartHTML += '</div>';
+                chartElement.innerHTML = chartHTML;
+            }
         }
 
-        function updateCheckoutSummary(subtotal) {
-            const shipping = subtotal > 10000 ? 0 : 500;
-            const tax = subtotal * 0.1;
-            const total = subtotal + shipping + tax;
+        function generateProductsReport(orders, products) {
+            // Similar implementation for products report
+            // ... (you can expand this based on your needs)
+        }
+
+        function generateUsersReport(orders) {
+            // Similar implementation for users report
+            // ... (you can expand this based on your needs)
+        }
+
+        function generateInventoryReport(products) {
+            // Similar implementation for inventory report
+            // ... (you can expand this based on your needs)
+        }
+
+        function exportReport() {
+            const reportType = document.getElementById('report-type').value;
+            const timePeriod = document.getElementById('time-period').value;
             
-            document.getElementById('subtotal').textContent = subtotal.toLocaleString();
-            document.getElementById('shipping').textContent = shipping.toLocaleString();
-            document.getElementById('tax').textContent = tax.toLocaleString();
-            document.getElementById('total').textContent = total.toLocaleString();
+            let reportData = {
+                reportType: reportType,
+                timePeriod: timePeriod,
+                generatedAt: new Date().toISOString(),
+                totalSales: document.getElementById('report-total-sales').textContent,
+                totalOrders: document.getElementById('report-total-orders').textContent,
+                avgOrderValue: document.getElementById('report-avg-order').textContent
+            };
+            
+            const dataStr = JSON.stringify(reportData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `report_${reportType}_${timePeriod}_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('Report exported successfully');
         }
 
         // Additional Functions
@@ -2418,7 +2805,7 @@
                         return;
                     }
                     const pageId = this.getAttribute('data-page');
-                    if (pageId === 'admin' && !currentUser.isAdmin) {
+                    if ((pageId === 'admin' || pageId === 'reports') && !currentUser.isAdmin) {
                         showNotification('Admin access required');
                         return;
                     }
@@ -2460,6 +2847,11 @@
                 document.getElementById('user-modal').classList.remove('active');
             });
             
+            // Report buttons
+            document.getElementById('generate-report-btn').addEventListener('click', generateSalesReport);
+            document.getElementById('export-report-btn').addEventListener('click', exportReport);
+            document.getElementById('apply-filters-btn').addEventListener('click', generateSalesReport);
+            
             // Checkout
             const checkoutBtn = document.getElementById('checkout-btn');
             const cancelCheckoutBtn = document.getElementById('cancel-checkout');
@@ -2479,7 +2871,11 @@
                     document.getElementById('checkout-phone').value = currentUser.phone || '';
                     
                     const total = shoppingCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                    document.getElementById('checkout-total').textContent = total.toLocaleString();
+                    const shipping = total > 10000 ? 0 : 500;
+                    const tax = total * 0.1;
+                    const grandTotal = total + shipping + tax;
+                    
+                    document.getElementById('checkout-total').textContent = grandTotal.toLocaleString();
                     checkoutModal.classList.add('active');
                 });
             }
